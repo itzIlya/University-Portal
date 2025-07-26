@@ -1,5 +1,5 @@
 # requirements.txt  (MySQL edition)
 Django==4.2.*
 djangorestframework
-mysqlclient         # C‑based driver, fastest
+PyMySQL>=1.1
 python-dotenv       # for .env parsing
