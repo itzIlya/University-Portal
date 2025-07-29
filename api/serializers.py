@@ -69,3 +69,35 @@ class SignInSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid credentials")
 
         return {"member_id": row[0]}  # validated data
+    
+
+
+
+
+class SemesterCreateSerializer(serializers.Serializer):
+    start_date  = serializers.DateField()
+    end_date    = serializers.DateField()
+    sem_title   = serializers.CharField(max_length=30)
+    is_active   = serializers.BooleanField()     # true → new active
+
+    def validate(self, data):
+        if data["start_date"] >= data["end_date"]:
+            raise serializers.ValidationError("start_date must be before end_date")
+        return data
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "add_semester",
+                (
+                    validated["start_date"],
+                    validated["end_date"],
+                    validated["sem_title"],
+                    validated["is_active"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        # procedure returns one row with the new UUID
+        return {"sid": rows[0][0]}

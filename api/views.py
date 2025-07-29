@@ -2,8 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from .serializers import EnrollSerializer, SignupSerializer, SignInSerializer
-from .db import call_procedure, DBError
+from .serializers import *
+from django.middleware import csrf
 
 @api_view(["GET"])
 def ping(request):
@@ -51,20 +51,32 @@ class SignupView(APIView):
     
 
 class SignInView(APIView):
-    """
-    POST /signin  → sets session cookie
-    """
-    permission_classes = []  # public
+    permission_classes = []      # public
 
     def post(self, request):
         ser = SignInSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
 
-        # 1. mark user as "authenticated" in the session
+        # log the user in (session)
         request.session["member_id"] = ser.validated_data["member_id"]
-        request.session.set_expiry(60 * 60 * 24 * 7)  # 7 days
+        request.session.set_expiry(60 * 60 * 24 * 7)    # 7 days
 
-        return Response({"signed_in": True}, status=status.HTTP_200_OK)
+        # create / retrieve token
+        token = csrf.get_token(request)
+
+        # build response *first*
+        resp = Response({"signed_in": True}, status=status.HTTP_200_OK)
+
+        # explicitly set the csrftoken cookie
+        resp.set_cookie(
+            "csrftoken",
+            token,
+            max_age=60 * 60 * 24 * 7,      # 7 days
+            httponly=False,                # must be readable by JS/axios
+            secure=False,                  # set True in production (HTTPS)
+            samesite="Lax",
+        )
+        return resp
 
 
 class SignOutView(APIView):
@@ -76,3 +88,24 @@ class SignOutView(APIView):
     def post(self, request):
         request.session.flush()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+class SemesterCreateView(APIView):
+    """
+    POST /semesters
+    Body:
+    {
+      "start_date": "2025-09-01",
+      "end_date":   "2026-01-15",
+      "sem_title":  "2025‑Fall",
+      "is_active":  true
+    }
+    """
+    from rest_framework.permissions import IsAdminUser
+    permission_classes = [IsAdminUser]   # or IsAdmin if you add one
+
+    def post(self, request):
+        ser = SemesterCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()
+        return Response(result, status=status.HTTP_201_CREATED)

@@ -9,4 +9,5 @@ urlpatterns = [
     path("signup", SignupView.as_view(), name="signup"),
     path("signin", SignInView.as_view()),
     path("signout", SignOutView.as_view()),
+    path("semesters", SemesterCreateView.as_view(), name="semester-create"),
 ]

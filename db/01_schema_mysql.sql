@@ -48,6 +48,7 @@ CREATE TABLE credentials (
 -- ── departments & majors ─────────────────────────────────────
 CREATE TABLE departments (
     did       CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    department_name VARCHAR(150) NOT NULL UNIQUE,
     location  VARCHAR(200)
 ) ENGINE = InnoDB;
 
@@ -59,13 +60,24 @@ CREATE TABLE majors (
         ON DELETE CASCADE
 ) ENGINE = InnoDB;
 
+CREATE TABLE semesters (
+    sid        CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    start_date DATE NOT NULL,
+    end_date   DATE NOT NULL,
+    sem_title  VARCHAR(30) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT uq_one_active CHECK (is_active IN (0,1))
+) ENGINE = InnoDB;
+
 -- ── student “file” per degree/major ──────────────────────────
 CREATE TABLE std_records (
     record_id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     mid       CHAR(36) NOT NULL,   -- FK → member
     gpa       DECIMAL(4,3),
     major_id  CHAR(36) NOT NULL,   -- FK → majors
+    entrance_sem CHAR(36) NOT NULL,
     UNIQUE KEY uq_student_major (mid, major_id),
+    FOREIGN KEY (entrance_sem) REFERENCES semesters(sid),
     FOREIGN KEY (mid)      REFERENCES members(mid),
     FOREIGN KEY (major_id) REFERENCES majors(major_id)
         ON DELETE CASCADE
@@ -97,12 +109,6 @@ CREATE TABLE rooms (
     capacity   INT CHECK (capacity > 0)
 ) ENGINE = InnoDB;
 
-CREATE TABLE semesters (
-    sid        CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    start_date DATE NOT NULL,
-    end_date   DATE NOT NULL,
-    sem_title  VARCHAR(30) NOT NULL
-) ENGINE = InnoDB;
 
 CREATE TABLE courses (
     cid         CHAR(36) PRIMARY KEY DEFAULT (UUID()),
