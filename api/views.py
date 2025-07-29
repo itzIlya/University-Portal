@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import EnrollSerializer
+from rest_framework import status, permissions
+from .serializers import EnrollSerializer, SignupSerializer, SignInSerializer
 from .db import call_procedure, DBError
 
 @api_view(["GET"])
@@ -32,3 +32,47 @@ class TranscriptView(APIView):
             for r in rows
         ]
         return Response(payload)
+
+
+
+class SignupView(APIView):  
+    """
+    POST /signup
+    Body: {fname, lname, national_id, birthday, username, password}
+    """
+
+    permission_classes = []           # public endpoint
+
+    def post(self, request):
+        ser = SignupSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()           # calls the procedure
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class SignInView(APIView):
+    """
+    POST /signin  → sets session cookie
+    """
+    permission_classes = []  # public
+
+    def post(self, request):
+        ser = SignInSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        # 1. mark user as "authenticated" in the session
+        request.session["member_id"] = ser.validated_data["member_id"]
+        request.session.set_expiry(60 * 60 * 24 * 7)  # 7 days
+
+        return Response({"signed_in": True}, status=status.HTTP_200_OK)
+
+
+class SignOutView(APIView):
+    """
+    POST /signout  → deletes session
+    """
+    permission_classes = [permissions.IsAuthenticated]  # see custom backend below
+
+    def post(self, request):
+        request.session.flush()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -16,10 +16,17 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",  # minimal core
     "django.contrib.staticfiles",
     "rest_framework",
+        # built‑ins needed by sessions + auth
+    "django.contrib.auth",
+    "django.contrib.sessions",
     "api",
 ]
 
-MIDDLEWARE = ["django.middleware.common.CommonMiddleware"]
+MIDDLEWARE = ["django.middleware.common.CommonMiddleware",
+                "django.contrib.sessions.middleware.SessionMiddleware",
+                # 2. *after* sessions so request.session exists
+                "api.middleware.MemberSessionMiddleware",
+]
 
 ROOT_URLCONF = "university.urls"
 WSGI_APPLICATION = "university.wsgi.application"
@@ -36,7 +43,7 @@ DATABASES = {
         "CONN_MAX_AGE": 600,
     }
 }
-
+AUTHENTICATION_BACKENDS = ["api.auth.MemberBackend"]    
 
 REST_FRAMEWORK = { "UNAUTHENTICATED_USER": None }  # keep auth simple for now
 STATIC_URL = "/static/"

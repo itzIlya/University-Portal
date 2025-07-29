@@ -87,3 +87,5 @@ yarn-error.log*
 #  Keep SQL schema scripts!
 # ─────────────────────────
 # (Nothing ignored here on purpose—everything under backend/db/ stays tracked)
+cookies.txt
+demoschema.sql
