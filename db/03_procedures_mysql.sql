@@ -132,7 +132,7 @@ BEGIN
     DECLARE v_total     INT;
 
     /*── 0. Uniqueness guards ───────────────────────────────────────────*/
-    IF EXISTS (SELECT 1 FROM member WHERE national_id = p_national_id) THEN
+    IF EXISTS (SELECT 1 FROM members WHERE national_id = p_national_id) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'national_id already exists';
     END IF;
 
@@ -141,13 +141,13 @@ BEGIN
     END IF;
 
     /*── 1. First‑member‑wins admin flag ────────────────────────────────*/
-    SELECT COUNT(*) INTO v_total FROM member;
+    SELECT COUNT(*) INTO v_total FROM members;
     IF v_total = 0 THEN
         SET p_is_admin = TRUE;   -- override caller value
     END IF;
 
     /*── 2. Insert into member ──────────────────────────────────────────*/
-    INSERT INTO member(mid, is_admin, fname, lname, national_id, birthday)
+    INSERT INTO members(mid, is_admin, fname, lname, national_id, birthday)
     VALUES (v_mid, p_is_admin, p_fname, p_lname, p_national_id, p_birthday);
 
     /*── 3. Insert credentials ─────────────────────────────────────────*/
