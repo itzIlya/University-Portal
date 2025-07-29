@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from .serializers import *
 from django.middleware import csrf
+from rest_framework.permissions import IsAdminUser
 
 @api_view(["GET"])
 def ping(request):
@@ -97,15 +98,48 @@ class SemesterCreateView(APIView):
     {
       "start_date": "2025-09-01",
       "end_date":   "2026-01-15",
-      "sem_title":  "2025‑Fall",
+      "sem_title":  "2025-Fall",
       "is_active":  true
     }
     """
-    from rest_framework.permissions import IsAdminUser
+    
     permission_classes = [IsAdminUser]   # or IsAdmin if you add one
 
     def post(self, request):
         ser = SemesterCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = ser.save()
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class DepartmentCreateView(APIView):
+    """
+    POST /departments
+    Body: { "department_name": "Mathematics", "location": "Building B" }
+    """
+   
+    permission_classes     = [IsAdminUser]  # only admins
+
+    def post(self, request):
+        ser = DepartmentCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class MajorCreateView(APIView):
+    """
+    POST /api/majors
+    Body:
+    {
+      "major_name":      "Software Engineering",
+      "department_name": "Computer Science"
+    }
+    """
+    permission_classes = [permissions.IsAdminUser]    # admin‑only
+
+    def post(self, request):
+        ser = MajorCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()                   # {"major_id": "..."}
         return Response(result, status=status.HTTP_201_CREATED)

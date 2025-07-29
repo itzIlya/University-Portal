@@ -101,3 +101,46 @@ class SemesterCreateSerializer(serializers.Serializer):
 
         # procedure returns one row with the new UUID
         return {"sid": rows[0][0]}
+
+class DepartmentCreateSerializer(serializers.Serializer):
+    department_name = serializers.CharField(max_length=150)
+    location        = serializers.CharField(max_length=200, allow_blank=True)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "add_department",
+                (
+                    validated["department_name"],
+                    validated["location"],
+                ),
+            )
+        except DBError as e:
+            # Stored proc raises SQLSTATE‑45000 for “name already exists”
+            raise serializers.ValidationError({"detail": e.msg})
+
+        # procedure returns one row with did
+        return {"did": rows[0][0]}
+    
+
+class MajorCreateSerializer(serializers.Serializer):
+    major_name       = serializers.CharField(max_length=150)
+    department_name  = serializers.CharField(max_length=150)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "add_major",
+                (
+                    validated["major_name"],
+                    validated["department_name"],
+                ),
+            )
+        except DBError as e:
+            # 45000 messages from add_major:
+            # • "department_name not found"
+            # • "major_name already exists"
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {"major_id": rows[0][0]}
+    
