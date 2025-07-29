@@ -46,30 +46,37 @@ class SignupSerializer(serializers.Serializer):
     
 
 
+# api/serializers.py
+from rest_framework import serializers
+from django.contrib.auth.hashers import check_password
+from django.db import connection
+
 class SignInSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True)
 
+    # will hold {"member_id": "...", "is_admin": True/False}
     def validate(self, data):
-        """
-        Fetch the stored hash, verify password, return member_id on success.
-        """
         username = data["username"]
         password = data["password"]
 
-        # raw SQL because we're ORM‑free
         with connection.cursor() as cur:
             cur.execute(
-                "SELECT member_id, password_hash FROM credentials WHERE username=%s",
+                """
+                SELECT c.member_id, m.is_admin, c.password_hash
+                FROM   credentials c
+                JOIN   members     m ON m.mid = c.member_id
+                WHERE  c.username = %s
+                """,
                 (username,),
             )
             row = cur.fetchone()
 
-        if row is None or not check_password(password, row[1]):
+        if row is None or not check_password(password, row[2]):
             raise serializers.ValidationError("Invalid credentials")
 
-        return {"member_id": row[0]}  # validated data
-    
+        return {"member_id": row[0], "is_admin": bool(row[1])}
+
 
 
 

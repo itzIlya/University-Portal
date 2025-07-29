@@ -52,30 +52,29 @@ class SignupView(APIView):
     
 
 class SignInView(APIView):
-    permission_classes = []      # public
+    permission_classes = []  # public
 
     def post(self, request):
         ser = SignInSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
 
-        # log the user in (session)
-        request.session["member_id"] = ser.validated_data["member_id"]
-        request.session.set_expiry(60 * 60 * 24 * 7)    # 7 days
+        member_id = ser.validated_data["member_id"]
+        is_admin  = ser.validated_data["is_admin"]
 
-        # create / retrieve token
+        # mark session
+        request.session["member_id"] = member_id
+        request.session.set_expiry(60 * 60 * 24 * 7)   # 7 days
+
+        # set CSRF token cookie
         token = csrf.get_token(request)
-
-        # build response *first*
-        resp = Response({"signed_in": True}, status=status.HTTP_200_OK)
-
-        # explicitly set the csrftoken cookie
+        resp = Response(
+            {"signed_in": True, "is_admin": is_admin},  # ← include flag
+            status=status.HTTP_200_OK
+        )
         resp.set_cookie(
-            "csrftoken",
-            token,
-            max_age=60 * 60 * 24 * 7,      # 7 days
-            httponly=False,                # must be readable by JS/axios
-            secure=False,                  # set True in production (HTTPS)
-            samesite="Lax",
+            "csrftoken", token,
+            max_age=60 * 60 * 24 * 7,
+            httponly=False, secure=False, samesite="Lax"
         )
         return resp
 
