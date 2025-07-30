@@ -305,4 +305,46 @@ BEGIN
 
     SELECT v_major_id AS major_id, v_did AS department_id;
 END//
+
+
+DROP PROCEDURE IF EXISTS list_semesters//
+CREATE PROCEDURE list_semesters ()
+BEGIN
+    /*
+       Returns every semester with its attributes,
+       newest first (by start_date, then end_date).
+    */
+    SELECT sid,
+           start_date,
+           end_date,
+           sem_title,
+           is_active
+      FROM semesters
+     ORDER BY start_date DESC, end_date DESC;
+END//
+
+DROP PROCEDURE IF EXISTS list_departments//
+CREATE PROCEDURE list_departments ()
+BEGIN
+    /*
+       Returns every department with its attributes,
+
+    */
+    SELECT did,
+           department_name
+      FROM departments;
+END//
+
+DROP PROCEDURE IF EXISTS list_majors//
+CREATE PROCEDURE list_majors ()
+BEGIN
+    SELECT
+        m.major_id as major_id,
+        m.major_name as major_name,
+        d.department_name as department_name
+    FROM   majors        AS m
+    JOIN   departments   AS d  ON d.did = m.did
+    ORDER  BY d.department_name ASC,
+              m.major_name      ASC;
+END//
 DELIMITER ;

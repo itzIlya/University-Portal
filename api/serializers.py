@@ -151,3 +151,74 @@ class MajorCreateSerializer(serializers.Serializer):
 
         return {"major_id": rows[0][0]}
     
+
+class StudentRecordCreateSerializer(serializers.Serializer):
+    national_id = serializers.CharField(max_length=20)
+    major_name  = serializers.CharField(max_length=150)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "register_student",
+                (
+                    validated["national_id"],
+                    validated["major_name"],
+                ),
+            )
+        except DBError as e:
+            # possible 45000 messages:
+            #  • 'No member with that national_id'
+            #  • 'No such major'
+            #  • 'Student already registered for this major'
+            #  • 'No active semester defined'
+            raise serializers.ValidationError({"detail": e.msg})
+
+        # procedure returns record_id + entrance_sem
+        return {"record_id": rows[0][0], "entrance_sem": rows[0][1]}
+    
+
+class SemesterListSerializer(serializers.ListSerializer):
+    """
+    Serializer is trivial here—just map SQL tuples → dicts.
+    """
+    def to_representation(self, data):
+        # `data` is the list of tuples returned by call_procedure
+        return [
+            {
+                "sid":        row[0],
+                "start_date": row[1],
+                "end_date":   row[2],
+                "sem_title":  row[3],
+                "is_active":  bool(row[4]),
+            }
+            for row in data
+        ]
+    
+class DepartmentListSerializer(serializers.ListSerializer):
+    """
+    Serializer is trivial here—just map SQL tuples → dicts.
+    """
+    def to_representation(self, data):
+        # `data` is the list of tuples returned by call_procedure
+        return [
+            {
+                "did":        row[0],
+                "department_name": row[1],
+            }
+            for row in data
+        ]
+    
+class MajorListSerializer(serializers.ListSerializer):
+    """
+    Serializer is trivial here—just map SQL tuples → dicts.
+    """
+    def to_representation(self, data):
+        # `data` is the list of tuples returned by call_procedure
+        return [
+            {
+                "major_id":        row[0],
+                "major_name": row[1],
+                "department_name": row[2],
+            }
+            for row in data
+        ]

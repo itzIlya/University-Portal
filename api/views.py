@@ -90,19 +90,26 @@ class SignOutView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 
-class SemesterCreateView(APIView):
+class SemesterView(APIView):
     """
-    POST /semesters
-    Body:
-    {
-      "start_date": "2025-09-01",
-      "end_date":   "2026-01-15",
-      "sem_title":  "2025-Fall",
-      "is_active":  true
-    }
+    GET  /api/semesters   → list
+    POST /api/semesters   → create (admin)
     """
-    
-    permission_classes = [IsAdminUser]   # or IsAdmin if you add one
+    # default permissions; we’ll override per method
+    permission_classes = [permissions.IsAuthenticated]
+
+    # ----- helper: choose permissions per HTTP verb -------------
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+    # --------------------- GET ----------------------------------
+    def get(self, request):
+        rows = call_procedure("list_semesters", ())
+        serializer = SemesterListSerializer(child=serializers.DictField())  # ← child
+        data = serializer.to_representation(rows)
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
         ser = SemesterCreateSerializer(data=request.data)
@@ -111,7 +118,7 @@ class SemesterCreateView(APIView):
         return Response(result, status=status.HTTP_201_CREATED)
     
 
-class DepartmentCreateView(APIView):
+class DepartmentView(APIView):
     """
     POST /departments
     Body: { "department_name": "Mathematics", "location": "Building B" }
@@ -125,8 +132,14 @@ class DepartmentCreateView(APIView):
         result = ser.save()
         return Response(result, status=status.HTTP_201_CREATED)
     
+    def get(self, request):
+        rows = call_procedure("list_departments", ())
+        serializer = DepartmentListSerializer(child=serializers.DictField())  # ← child
+        data = serializer.to_representation(rows)
+        return Response(data, status=status.HTTP_200_OK)
+    
 
-class MajorCreateView(APIView):
+class MajorView(APIView):
     """
     POST /api/majors
     Body:
@@ -142,3 +155,42 @@ class MajorCreateView(APIView):
         ser.is_valid(raise_exception=True)
         result = ser.save()                   # {"major_id": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
+    
+    def get(self, request):
+        rows = call_procedure("list_majors", ())
+        serializer = MajorListSerializer(child=serializers.DictField())  # ← child
+        data = serializer.to_representation(rows)
+        return Response(data, status=status.HTTP_200_OK)
+    
+
+    
+class StudentRecordCreateView(APIView):
+    """
+    POST /api/student-records
+    Body:
+    {
+      "national_id": "X123456789",
+      "major_name":  "Software Engineering"
+    }
+    """
+    permission_classes = [permissions.IsAdminUser]     # admin action
+
+    def post(self, request):
+        ser = StudentRecordCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()              # {"record_id": "...", "entrance_sem": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class SemesterListView(APIView):
+    """
+    GET /api/semesters
+    Response: list of semester objects
+    """
+    permission_classes = [permissions.AllowAny]  # or IsAuthenticated
+
+    def get(self, request):
+        rows = call_procedure("list_semesters", ())
+        serializer = SemesterListSerializer()
+        data = serializer.to_representation(rows)
+        return Response(data, status=status.HTTP_200_OK)
