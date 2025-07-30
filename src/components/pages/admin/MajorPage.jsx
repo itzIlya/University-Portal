@@ -1,178 +1,120 @@
 import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
+  Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress, Alert, Stack, Chip, Paper, TextField, MenuItem, Button,
 } from "@mui/material";
+import SchoolIcon  from "@mui/icons-material/School";
 import useCrudList from "../../../hooks/useCrudList";
+import AdminCard   from "../../atoms/AdminCard";
 
 const emptyMajor = { major_name: "", department_name: "" };
 
 export default function MajorPage({ isFormOnly = false }) {
-  /* ------- majors: GET + POST ------- */
-  const {
-    items,
-    loading,
-    error,
-    setError,
-    newItem,
-    setNewItem,
-    create,
-  } = useCrudList("majors", emptyMajor);
+  /* create panel */
+  if (isFormOnly) {
+    const { error, setError, newItem, setNewItem, create } =
+      useCrudList("majors", emptyMajor);
+    const { items: depts, loading: depLoad, error: depErr } =
+      useCrudList("departments", {});
 
-  /* ------- departments for dropdown ------- */
-  const {
-    items: departments,
-    loading: deptsLoading,
-    error: deptsError,
-  } = useCrudList("departments", {}); // read-only; we won’t call create()
+    const majorOk = newItem.major_name.trim().length > 0;
+    const deptOk  = newItem.department_name.trim().length > 0;
+    const formValid = majorOk && deptOk;
 
-  /* ------- local validation ------- */
-  const majorOk = newItem.major_name.trim().length > 0;
-  const deptOk  = newItem.department_name.trim().length > 0;
-  const formValid = majorOk && deptOk;
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!formValid) {
+        setError("Both fields are required");
+        return;
+      }
+      create();
+    };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formValid) {
-      setError("Both Major and Department are required.");
-      return;
-    }
-    /* send trimmed payload */
-    setNewItem({
-      major_name:      newItem.major_name.trim(),
-      department_name: newItem.department_name.trim(),
-    });
-    create();
-  };
-
-  return (
-    <Box sx={{ p: isFormOnly ? 0 : 4 }}>
-      <Typography variant="h5" mb={2}>
-        {isFormOnly ? "Create Major" : "Manage Majors"}
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Grid
-          container
-          spacing={2}
+    return (
+      <>
+        <Typography variant="h6" mb={2}>Create Major</Typography>
+        {error && (
+          <Alert sx={{ mb: 2 }} severity="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        <Stack
           component="form"
           onSubmit={handleSubmit}
-          sx={{ mb: isFormOnly ? 0 : 4 }}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
         >
-          <Grid item xs={12} sm={5}>
-            <TextField
-              label="Major Name"
-              value={newItem.major_name}
-              onChange={(e) =>
-                setNewItem({ ...newItem, major_name: e.target.value })
-              }
-              fullWidth
-              error={!majorOk}
-              helperText={!majorOk ? "Required" : ""}
-            />
-          </Grid>
-          <Grid item xs={12} sm={5}>
-            <TextField
-              select
-              label="Department"
-              value={newItem.department_name}
-              onChange={(e) =>
-                setNewItem({ ...newItem, department_name: e.target.value })
-              }
-              fullWidth
-              disabled={deptsLoading || !!deptsError}
-              error={!deptOk}
-              helperText={
-                deptsLoading
-                  ? "Loading departments…"
-                  : deptsError
-                  ? "Failed to load departments"
-                  : !deptOk
-                  ? "Required"
-                  : ""
-              }
-            >
-              {departments.map((d) => (
-                <MenuItem key={d.id} value={d.department_name}>
-                  {d.department_name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Grid>
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          sm={2}
-          sx={{ display: "flex", justifyContent: "flex-end", ml: "auto" }}
-        >
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors duration-200 px-4"
-            sx={{ height: 56 }}
-            disabled={!formValid}
+          <TextField
+            label="Major"
+            value={newItem.major_name}
+            onChange={(e) => setNewItem({ ...newItem, major_name: e.target.value })}
+            required
+          />
+          <TextField
+            select
+            label="Department"
+            value={newItem.department_name}
+            onChange={(e) => setNewItem({ ...newItem, department_name: e.target.value })}
+            disabled={depLoad || !!depErr}
+            required
+            sx={{ minWidth: 180 }}
           >
+            {depts.map((d) => (
+              <MenuItem key={d.id} value={d.department_name}>
+                {d.department_name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button variant="contained" type="submit" className="add-btn" disabled={!formValid}>
             Add
           </Button>
-        </Grid>
-      </Box>
+        </Stack>
+      </>
+    );
+  }
+
+  /* list view */
+  const { items, loading, error, setError } = useCrudList("majors", {});
+
+  return (
+    <AdminCard>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <SchoolIcon color="primary" />
+          <Typography variant="h5" fontWeight={600}>Majors</Typography>
+        </Stack>
+        <Chip color="primary" label={items.length} />
+      </Stack>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert sx={{ mb: 2 }} severity="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {!isFormOnly && (
-        <>
-          <Typography variant="h6" mt={2} mb={1}>
-            Existing Majors
-          </Typography>
-          {loading ? (
-            <Box display="flex" justifyContent="center" my={4}>
-              <CircularProgress />
-            </Box>
-          ) : items.length === 0 ? (
-            <Typography textAlign="center" color="text.secondary">
-              No majors found.
-            </Typography>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Major Name</TableCell>
-                    <TableCell>Department Name</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell>{m.major_name}</TableCell>
-                      <TableCell>{m.department_name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </>
+      {loading ? (
+        <Stack alignItems="center" my={4}><CircularProgress /></Stack>
+      ) : items.length === 0 ? (
+        <Typography color="text.secondary">No majors found.</Typography>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table sx={{ "& tbody tr:nth-of-type(odd)": { bgcolor: "action.hover" } }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Major</TableCell>
+                <TableCell>Department</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {items.map((m, idx) => (
+                <TableRow key={m.id ?? idx}>
+                  <TableCell>{m.major_name}</TableCell>
+                  <TableCell>{m.department_name}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </Box>
+    </AdminCard>
   );
 }

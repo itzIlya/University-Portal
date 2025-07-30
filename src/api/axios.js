@@ -23,7 +23,7 @@ let csrfReady;   // memorised promise so we fetch the cookie only once
 function ensureCSRFCookie() {
   if (getCSRFCookie()) return Promise.resolve(); // already present
   if (!csrfReady) {
-    csrfReady = api.get("ping/");  // harmless endpoint that just returns 200 OK
+    csrfReady = api.get("ping");  // harmless endpoint that just returns 200 OK
   }
   return csrfReady;
 }

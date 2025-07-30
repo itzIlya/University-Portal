@@ -6,3 +6,7 @@ body {
   margin: 0;
   font-family: 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
 }
+.add-btn {
+  @apply font-medium rounded-lg shadow-md transition-transform;
+}
+.add-btn:hover { transform: translateY(-1px); }

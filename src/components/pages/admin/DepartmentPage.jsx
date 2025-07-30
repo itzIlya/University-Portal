@@ -1,141 +1,103 @@
 import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
+  Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress, Alert, Stack, Chip, Paper, TextField, Button,
 } from "@mui/material";
-import useCrudList from "../../../hooks/useCrudList";
+import BusinessIcon from "@mui/icons-material/Business";
+import useCrudList   from "../../../hooks/useCrudList";
+import AdminCard     from "../../atoms/AdminCard";
 
 const emptyDept = { department_name: "", location: "" };
 
 export default function DepartmentPage({ isFormOnly = false }) {
-  const { items, loading, error, setError, newItem, setNewItem, create } =
-    useCrudList("departments", emptyDept);
+  /* create panel */
+  if (isFormOnly) {
+    const { error, setError, newItem, setNewItem, create } =
+      useCrudList("departments", emptyDept);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!newItem.department_name) {
-      setError("Department name is required");
-      return;
-    }
-    if (!newItem.location) {
-      setError("Location is required");
-      return;
-    }
-    create();
-  };
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (!newItem.department_name || !newItem.location) {
+        setError("All fields are required");
+        return;
+      }
+      create();
+    };
 
-  return (
-    <Box sx={{ p: isFormOnly ? 0 : 4 }}>
-      <Typography variant="h5" mb={2}>
-        {isFormOnly ? "Create Department" : "Manage Departments"}
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Grid
-          container
-          spacing={2}
+    return (
+      <>
+        <Typography variant="h6" mb={2}>Create Department</Typography>
+        {error && (
+          <Alert sx={{ mb: 2 }} severity="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        <Stack
           component="form"
           onSubmit={handleSubmit}
-          sx={{ mb: isFormOnly ? 0 : 4 }}
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
         >
-          <Grid item xs={12} sm={5}>
-            <TextField
-              label="Department Name"
-              value={newItem.department_name}
-              onChange={(e) =>
-                setNewItem({ ...newItem, department_name: e.target.value })
-              }
-              fullWidth
-              error={!newItem.department_name}
-              helperText={!newItem.department_name ? "Required" : ""}
-            />
-          </Grid>
-          <Grid item xs={12} sm={5}>
-            <TextField
-              label="Location"
-              value={newItem.location}
-              onChange={(e) =>
-                setNewItem({ ...newItem, location: e.target.value })
-              }
-              fullWidth
-              error={!newItem.location}
-              helperText={!newItem.location ? "Required" : ""}
-            />
-          </Grid>
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          sm={2}
-          sx={{ display: "flex", justifyContent: "flex-end", ml: "auto" }}
-        >
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-colors duration-200 px-4"
-            sx={{ height: 56 }}
-          >
-            Add
-          </Button>
-        </Grid>
-      </Box>
+          <TextField
+            label="Department"
+            value={newItem.department_name}
+            onChange={(e) => setNewItem({ ...newItem, department_name: e.target.value })}
+            required
+          />
+          <TextField
+            label="Location"
+            value={newItem.location}
+            onChange={(e) => setNewItem({ ...newItem, location: e.target.value })}
+            required
+          />
+          <Button variant="contained" type="submit" className="add-btn">Add</Button>
+        </Stack>
+      </>
+    );
+  }
+
+  /* list view */
+  const { items, loading, error, setError } = useCrudList("departments", {});
+
+  return (
+    <AdminCard>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <BusinessIcon color="primary" />
+          <Typography variant="h5" fontWeight={600}>Departments</Typography>
+        </Stack>
+        <Chip color="primary" label={items.length} />
+      </Stack>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert sx={{ mb: 2 }} severity="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {!isFormOnly && (
-        <>
-          <Typography variant="h6" mt={2} mb={1}>
-            Existing Departments
-          </Typography>
-          {loading && (
-            <Box display="flex" justifyContent="center" my={4}>
-              <CircularProgress />
-            </Box>
-          )}
-          {!loading && !error && items.length === 0 && (
-            <Typography textAlign="center" color="text.secondary">
-              No departments found.
-            </Typography>
-          )}
-          {!loading && !error && items.length > 0 && (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Department Name</TableCell>
-                    <TableCell>Location</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell>{d.department_name}</TableCell>
-                      <TableCell>{d.location}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </>
+      {loading ? (
+        <Stack alignItems="center" my={4}><CircularProgress /></Stack>
+      ) : items.length === 0 ? (
+        <Typography color="text.secondary">No departments found.</Typography>
+      ) : (
+        <TableContainer component={Paper}>
+          <Table sx={{ "& tbody tr:nth-of-type(odd)": { bgcolor: "action.hover" } }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Department</TableCell>
+                <TableCell>Location</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {items.map((d, idx) => (
+                <TableRow key={d.id ?? idx}>
+                  <TableCell>{d.department_name}</TableCell>
+                  <TableCell>{d.location}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
-    </Box>
+    </AdminCard>
   );
 }
