@@ -347,4 +347,248 @@ BEGIN
     ORDER  BY d.department_name ASC,
               m.major_name      ASC;
 END//
+
+
+
+/*───────────────────────────────────────────────────────────────
+  1. promote_member_to_staff
+───────────────────────────────────────────────────────────────*/
+DROP PROCEDURE IF EXISTS promote_member_to_staff//
+CREATE PROCEDURE promote_member_to_staff (
+    IN  p_national_id CHAR(20)
+)
+BEGIN
+    DECLARE v_mid CHAR(36);
+
+    -- 1. resolve member
+    SELECT mid INTO v_mid
+      FROM members
+     WHERE national_id = p_national_id
+     LIMIT 1;
+
+    IF v_mid IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'No member with that national_id';
+    END IF;
+
+    -- 2. insert into staffs (idempotent)
+    INSERT IGNORE INTO staffs(member_id) VALUES (v_mid);
+
+    SELECT v_mid AS staff_id;
+END//
+
+/*───────────────────────────────────────────────────────────────
+  2. assign_staff_role
+───────────────────────────────────────────────────────────────*/
+DROP PROCEDURE IF EXISTS assign_staff_role//
+CREATE PROCEDURE assign_staff_role (
+    IN  p_national_id    CHAR(20),
+    IN  p_department_name VARCHAR(150),
+    IN  p_staff_role      ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF'),
+    IN  p_start_date      DATE,
+    IN  p_end_date        DATE
+)
+BEGIN
+    DECLARE v_mid  CHAR(36);
+    DECLARE v_did  CHAR(36);
+
+    -- member → mid
+    SELECT mid INTO v_mid
+      FROM members WHERE national_id = p_national_id LIMIT 1;
+    IF v_mid IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'No member with that national_id';
+    END IF;
+
+    -- department → did
+    SELECT did INTO v_did
+      FROM departments WHERE department_name = p_department_name LIMIT 1;
+    IF v_did IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'department_name not found';
+    END IF;
+
+    -- ensure staff row exists
+    INSERT IGNORE INTO staffs(member_id) VALUES (v_mid);
+
+    -- duplicate check (same member, dept, overlapping start date)
+    IF EXISTS (
+        SELECT 1 FROM workers
+         WHERE member_id = v_mid
+           AND did = v_did
+           AND start_date = p_start_date
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Role already exists for that start_date';
+    END IF;
+
+    -- insert
+    INSERT INTO workers(member_id, did, staff_role, start_date, end_date)
+    VALUES (v_mid, v_did, p_staff_role, p_start_date, p_end_date);
+
+    SELECT v_mid AS staff_id, v_did AS department_id;
+END//
+
+DROP PROCEDURE IF EXISTS add_course//
+CREATE PROCEDURE add_course (
+    IN p_course_name VARCHAR(200)
+)
+BEGIN
+    DECLARE v_cid CHAR(36) DEFAULT (UUID());
+
+    -- uniqueness guard
+    IF EXISTS (SELECT 1 FROM courses WHERE course_name = p_course_name) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'course_name already exists';
+    END IF;
+
+    INSERT INTO courses (cid, course_name) VALUES (v_cid, p_course_name);
+
+    SELECT v_cid AS cid;
+END//
+
+
+DROP PROCEDURE IF EXISTS add_presented_course//
+CREATE PROCEDURE add_presented_course (
+    IN p_prof_national_id CHAR(20),
+    IN p_course_name      VARCHAR(200),
+    IN p_sem_title        VARCHAR(30),
+    IN p_capacity         INT,
+    IN p_max_capacity     INT,
+    IN p_on_days          VARCHAR(15),
+    IN p_on_times         VARCHAR(20),
+    IN p_room_label       VARCHAR(50)  -- NULLABLE
+)
+BEGIN
+    DECLARE v_prof_id  CHAR(36);
+    DECLARE v_course_id CHAR(36);
+    DECLARE v_sem_id   CHAR(36);
+    DECLARE v_room_id  CHAR(36);
+    DECLARE v_pcid     CHAR(36) DEFAULT (UUID());
+
+    /*── guards ────────────────────────────────────────────────*/
+    IF p_capacity <= 0 OR p_max_capacity <= 0 OR p_capacity > p_max_capacity THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Invalid capacity values';
+    END IF;
+
+    /*── 1. resolve professor (must already be staff) ──────────*/
+    SELECT s.member_id INTO v_prof_id
+      FROM staffs s
+      JOIN members m ON m.mid = s.member_id
+     WHERE m.national_id = p_prof_national_id
+     LIMIT 1;
+
+    IF v_prof_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Professor not found (must be staff)';
+    END IF;
+
+    /*── 2. resolve course ------------------------------------*/
+    SELECT cid INTO v_course_id
+      FROM courses WHERE course_name = p_course_name LIMIT 1;
+    IF v_course_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'course_name not found';
+    END IF;
+
+    /*── 3. resolve semester ----------------------------------*/
+    SELECT sid INTO v_sem_id
+      FROM semesters WHERE sem_title = p_sem_title LIMIT 1;
+    IF v_sem_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'sem_title not found';
+    END IF;
+
+    /*── 4. optional room -------------------------------------*/
+    IF p_room_label IS NOT NULL THEN
+        SELECT rid INTO v_room_id
+          FROM rooms WHERE room_label = p_room_label LIMIT 1;
+        IF v_room_id IS NULL THEN
+            SIGNAL SQLSTATE '45000'
+              SET MESSAGE_TEXT = 'room_label not found';
+        END IF;
+    END IF;
+
+    /*── 5. insert section ------------------------------------*/
+    INSERT INTO presented_courses (
+        pcid, prof_id, capacity, max_capacity,
+        semester_id, on_days, on_times, room_id, course_id
+    )
+    VALUES (
+        v_pcid, v_prof_id, p_capacity, p_max_capacity,
+        v_sem_id, p_on_days, p_on_times, v_room_id, v_course_id
+    );
+
+    SELECT v_pcid AS pcid;
+END//
+
+
+DROP PROCEDURE IF EXISTS add_room//
+CREATE PROCEDURE add_room (
+    IN p_room_label VARCHAR(50),
+    IN p_capacity   INT
+)
+BEGIN
+    DECLARE v_rid CHAR(36) DEFAULT (UUID());
+
+    /*── guards ────────────────────────────────────────────────*/
+    IF p_capacity <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'capacity must be > 0';
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM rooms WHERE room_label = p_room_label) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'room_label already exists';
+    END IF;
+
+    /*── insert ────────────────────────────────────────────────*/
+    INSERT INTO rooms (rid, room_label, capacity)
+    VALUES (v_rid, p_room_label, p_capacity);
+
+    /*── return UUID ───────────────────────────────────────────*/
+    SELECT v_rid AS rid;
+END//
+
+
+
+DROP PROCEDURE IF EXISTS add_student_semester//
+CREATE PROCEDURE add_student_semester (
+    IN p_record_id CHAR(36)
+)
+BEGIN
+    DECLARE v_sem_id CHAR(36);
+
+    /*── 1. ensure *one* active semester exists ─────────────────*/
+    SELECT sid
+      INTO v_sem_id
+      FROM semesters
+     WHERE is_active = TRUE
+     ORDER BY start_date DESC      -- if more than one, pick latest
+     LIMIT 1;
+
+    IF v_sem_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'No active semester';
+    END IF;
+
+    /*── 2. duplicate guard (same record & semester) ───────────*/
+    IF EXISTS (
+        SELECT 1 FROM student_semesters
+         WHERE record_id  = p_record_id
+           AND semester_id = v_sem_id
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Student semester already exists';
+    END IF;
+
+    /*── 3. insert row (sem_status = ACTIVE) ───────────────────*/
+    INSERT INTO student_semesters
+          (record_id, semester_id, sem_status)
+    VALUES (p_record_id, v_sem_id, 'ACTIVE');
+
+    /*── 4. return semester UUID ───────────────────────────────*/
+    SELECT v_sem_id AS semester_id;
+END//
 DELIMITER ;

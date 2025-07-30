@@ -222,3 +222,137 @@ class MajorListSerializer(serializers.ListSerializer):
             }
             for row in data
         ]
+    
+
+class StaffRoleCreateSerializer(serializers.Serializer):
+    national_id      = serializers.CharField(max_length=20)
+    department_name  = serializers.CharField(max_length=150)
+    staff_role       = serializers.ChoiceField(
+        choices=["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF"]
+    )
+    start_date       = serializers.DateField()
+    end_date         = serializers.DateField(allow_null=True, required=False)
+
+    def validate(self, data):
+        if data.get("end_date") and data["end_date"] <= data["start_date"]:
+            raise serializers.ValidationError("end_date must be after start_date")
+        return data
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "assign_staff_role",
+                (
+                    validated["national_id"],
+                    validated["department_name"],
+                    validated["staff_role"],
+                    validated["start_date"],
+                    validated.get("end_date"),
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {
+            "staff_id":       rows[0][0],
+            "department_id":  rows[0][1],
+            "staff_role":     validated["staff_role"],
+            "start_date":     validated["start_date"],
+            "end_date":       validated.get("end_date"),
+        }
+    
+class StaffPromoteSerializer(serializers.Serializer):
+    national_id = serializers.CharField(max_length=20)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "promote_member_to_staff",
+                (validated["national_id"],),
+            )
+        except DBError as e:
+            # • 'No member with that national_id'
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {"staff_id": rows[0][0]}     # the UUID returned by procedure
+    
+
+class CourseCreateSerializer(serializers.Serializer):
+    course_name = serializers.CharField(max_length=200)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure("add_course", (validated["course_name"],))
+        except DBError as e:
+            # 'course_name already exists'
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {"cid": rows[0][0]}
+    
+class PresentedCourseCreateSerializer(serializers.Serializer):
+    prof_national_id = serializers.CharField(max_length=20)
+    course_name      = serializers.CharField(max_length=200)
+    sem_title        = serializers.CharField(max_length=30)
+    capacity         = serializers.IntegerField(min_value=1)
+    max_capacity     = serializers.IntegerField(min_value=1)
+    on_days          = serializers.CharField(max_length=15)
+    on_times         = serializers.CharField(max_length=20)
+    room_label       = serializers.CharField(max_length=50, allow_null=True, required=False)
+
+    def validate(self, data):
+        if data["capacity"] > data["max_capacity"]:
+            raise serializers.ValidationError("capacity cannot exceed max_capacity")
+        return data
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "add_presented_course",
+                (
+                    validated["prof_national_id"],
+                    validated["course_name"],
+                    validated["sem_title"],
+                    validated["capacity"],
+                    validated["max_capacity"],
+                    validated["on_days"],
+                    validated["on_times"],
+                    validated.get("room_label"),
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {"pcid": rows[0][0]}
+    
+
+class RoomCreateSerializer(serializers.Serializer):
+    room_label = serializers.CharField(max_length=50)
+    capacity   = serializers.IntegerField(min_value=1)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure(
+                "add_room",
+                (validated["room_label"], validated["capacity"]),
+            )
+        except DBError as e:
+            # 45000 messages: 'capacity must be > 0', 'room_label already exists'
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {"rid": rows[0][0]}
+    
+
+class StudentSemesterCreateSerializer(serializers.Serializer):
+    record_id = serializers.CharField(max_length=36)
+
+    def create(self, validated):
+        try:
+            rows = call_procedure("add_student_semester", (validated["record_id"],))
+        except DBError as e:
+            # 'No active semester' or 'Student semester already exists'
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {
+            "record_id":   validated["record_id"],
+            "semester_id": rows[0][0],
+        }   

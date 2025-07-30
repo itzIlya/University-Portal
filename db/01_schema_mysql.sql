@@ -93,7 +93,7 @@ CREATE TABLE staffs (
 CREATE TABLE workers (
     member_id  CHAR(36) NOT NULL,
     did        CHAR(36) NOT NULL,
-    staff_role ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN') NOT NULL,
+    staff_role ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN', 'PROF') NOT NULL,
     start_date DATE  NOT NULL,
     end_date   DATE,
     PRIMARY KEY (member_id, did, start_date),

@@ -194,3 +194,113 @@ class SemesterListView(APIView):
         serializer = SemesterListSerializer()
         data = serializer.to_representation(rows)
         return Response(data, status=status.HTTP_200_OK)
+    
+class StaffRoleCreateView(APIView):
+    """
+    POST /api/staff-roles
+    {
+      "national_id":     "X123456789",
+      "department_name": "Computer Science",
+      "staff_role":      "PROF",
+      "start_date":      "2025-08-01",
+      "end_date":        null
+    }
+    """
+    permission_classes = [permissions.IsAdminUser]   # admin‑only
+
+    def post(self, request):
+        ser = StaffRoleCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+class StaffPromoteView(APIView):
+    """
+    POST /api/staff
+    Body: { "national_id": "X123456789" }
+    Promotes an existing member to staff (idempotent).
+    """
+    permission_classes = [permissions.IsAdminUser]   # admin‑only
+
+    def post(self, request):
+        ser = StaffPromoteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()               # {"staff_id": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+class CourseCreateView(APIView):
+    """
+    POST /api/courses
+    Body: { "course_name": "Calculus I" }
+    """
+    permission_classes = [permissions.IsAdminUser]   # admin‑only
+
+    def post(self, request):
+        ser = CourseCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()      # {"cid": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+class PresentedCourseCreateView(APIView):
+    """
+    POST /api/presented-courses
+    {
+      "prof_national_id": "X123456789",
+      "course_name":      "Algorithms",
+      "sem_title":        "2025‑Fall",
+      "capacity":         30,
+      "max_capacity":     40,
+      "on_days":          "MWF",
+      "on_times":         "10:00-11:15",
+      "room_label":       "A‑101"   // optional
+    }
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        ser = PresentedCourseCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()              # {"pcid": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+class RoomView(APIView):
+
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        ser = RoomCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()              # {"pcid": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+class StudentSemesterCreateView(APIView):
+    """
+    POST /api/student-semesters
+    { "record_id": "c0f2…uuid…" }
+
+    • Auth required (session)
+    • Checks that the given student_record belongs to the logged‑in member
+    • Calls stored proc to create exactly one ACTIVE row for the current semester
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        record_id = request.data.get("record_id")
+
+        # ---------- ownership check ---------------------------------
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
+                (record_id, request.user.id),
+            )
+            if cur.fetchone() is None:
+                return Response(
+                    {"detail": "You do not own this student record"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        # ---------- proceed to stored procedure ---------------------
+        ser = StudentSemesterCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()           # {"record_id": "...", "semester_id": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
