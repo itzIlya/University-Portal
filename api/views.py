@@ -5,6 +5,7 @@ from rest_framework import status, permissions
 from .serializers import *
 from django.middleware import csrf
 from rest_framework.permissions import IsAdminUser
+from rest_framework.exceptions import PermissionDenied
 
 @api_view(["GET"])
 def ping(request):
@@ -368,40 +369,67 @@ class PresentedCourseListView(APIView):
         return Response(data, status=status.HTTP_200_OK)
     
 
-class TakenCourseCreateView(APIView):
+class TakenCourseView(APIView):
     """
-    POST /api/taken-courses
-    {
-      "record_id":   "<record>",
-      "semester_id": "<sid>",
-      "pcid":        "<presented_course>"
-    }
-
-    • Any authenticated student can enrol *their own* record.
-    • Admins/staff can enrol any record.
+    POST   /api/taken-courses   → add seat
+    DELETE /api/taken-courses   → remove RESERVED seat
     """
     permission_classes = [permissions.IsAuthenticated]
 
+    # ---- shared ownership check (non-admins) -----------------
+    def _verify_ownership(self, record_id, user):
+        if user.is_staff:
+            return  # admins skip
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
+                (record_id, user.id),
+            )
+            if cur.fetchone() is None:
+                raise PermissionDenied("You do not own this student record")
+
+    # ---------- create ----------------------------------------
     def post(self, request):
-        data = request.data
-        record_id = data.get("record_id")
-
-        # ----- ownership check (skip for admins) -----------------
-        if not request.user.is_staff:
-            with connection.cursor() as cur:
-                cur.execute(
-                    "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
-                    (record_id, request.user.id),
-                )
-                if cur.fetchone() is None:
-                    return Response(
-                        {"detail": "You do not own this student record"},
-                        status=status.HTTP_403_FORBIDDEN,
-                    )
-
-        # ----- call serializer / procedure -----------------------
-        ser = TakenCourseCreateSerializer(data=data)
+        self._verify_ownership(request.data.get("record_id"), request.user)
+        ser = TakenCourseCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         ser.save()
-
         return Response({"enrolled": True}, status=status.HTTP_201_CREATED)
+
+    # ---------- delete RESERVED -------------------------------
+    def delete(self, request):
+        self._verify_ownership(request.data.get("record_id"), request.user)
+        ser = TakenCourseDeleteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ser.delete(ser.validated_data)
+        return Response({"removed": True}, status=status.HTTP_200_OK)
+    
+
+class MemberListView(APIView):
+    """
+    GET /api/members   (admin only)
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        # 1. run stored procedure
+        rows = call_procedure("list_members", ())
+
+        # 2. map tuple→dict once, coercing is_admin to bool
+        members = [
+            {
+                "mid":          r[0],
+                "is_admin":     bool(r[1]),
+                "fname":        r[2],
+                "lname":        r[3],
+                "national_id":  r[4],
+                "birthday":     r[5],
+                "username":     r[6],
+                "last_login":   r[7],
+            }
+            for r in rows
+        ]
+
+        # 3. let DRF serializer handle final JSON output
+        data = MemberItemSerializer(members, many=True).data
+        return Response(data, status=status.HTTP_200_OK)

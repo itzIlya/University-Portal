@@ -733,4 +733,60 @@ BEGIN
     COMMIT;
 END//
 
+DROP PROCEDURE IF EXISTS remove_reserved_course_tx//
+CREATE PROCEDURE remove_reserved_course_tx (
+    IN p_record_id   CHAR(36),
+    IN p_semester_id CHAR(36),
+    IN p_pcid        CHAR(36)
+)
+BEGIN
+    DECLARE v_status ENUM('RESERVED','TAKING','COMPLETED');
+
+    START TRANSACTION;
+
+    /* lock the target row */
+    SELECT status
+      INTO v_status
+      FROM taken_courses
+     WHERE record_id   = p_record_id
+       AND semester_id = p_semester_id
+       AND pcid        = p_pcid
+       FOR UPDATE;
+
+    IF v_status IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Enrolment not found';
+    END IF;
+
+    IF v_status <> 'RESERVED' THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Only RESERVED rows can be removed';
+    END IF;
+
+    /* delete seat */
+    DELETE FROM taken_courses
+     WHERE record_id   = p_record_id
+       AND semester_id = p_semester_id
+       AND pcid        = p_pcid;
+
+    COMMIT;
+END//
+
+
+DROP PROCEDURE IF EXISTS list_members//
+CREATE PROCEDURE list_members ()
+BEGIN
+    SELECT
+        m.mid,
+        m.is_admin,
+        m.fname,
+        m.lname,
+        m.national_id,
+        m.birthday,
+        c.username,
+        c.last_login
+    FROM   members      AS m
+    LEFT   JOIN credentials AS c ON c.member_id = m.mid
+    ORDER  BY m.lname, m.fname;
+END//
 DELIMITER ;

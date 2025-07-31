@@ -450,3 +450,32 @@ class TakenCourseCreateSerializer(serializers.Serializer):
         except DBError as e:
             raise serializers.ValidationError({"detail": e.msg})
         return validated
+    
+class TakenCourseDeleteSerializer(serializers.Serializer):
+    record_id   = serializers.CharField(max_length=36)
+    semester_id = serializers.CharField(max_length=36)
+    pcid        = serializers.CharField(max_length=36)
+
+    def delete(self, validated):
+        try:
+            call_procedure(
+                "remove_reserved_course_tx",
+                (
+                    validated["record_id"],
+                    validated["semester_id"],
+                    validated["pcid"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+        return validated
+
+class MemberItemSerializer(serializers.Serializer):
+    mid          = serializers.CharField()
+    is_admin     = serializers.BooleanField()
+    fname        = serializers.CharField()
+    lname        = serializers.CharField()
+    national_id  = serializers.CharField()
+    birthday     = serializers.DateField()
+    username     = serializers.CharField(allow_null=True)
+    last_login   = serializers.DateTimeField(allow_null=True)

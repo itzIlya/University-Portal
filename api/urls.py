@@ -21,4 +21,6 @@ urlpatterns = [
     path("rooms", RoomView.as_view(), name="room-create"),
     path("student-semesters", StudentSemesterCreateView.as_view(), name="student-semester-create"),
     path("staff", StaffView.as_view(), name="staff-endpoint"),
+    path("taken-courses", TakenCourseView.as_view(), name="taken-course"),
+     path("members", MemberListView.as_view(), name="member-list"),
 ]
