@@ -4,7 +4,7 @@ import {
 } from "@mui/material";
 import SchoolIcon  from "@mui/icons-material/School";
 import useCrudList from "../../../hooks/useCrudList";
-import AdminCard   from "../../atoms/AdminCard";
+import AdminCard from "../../molecules/AdminCard";
 
 const emptyMajor = { major_name: "", department_name: "" };
 

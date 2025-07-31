@@ -5,8 +5,7 @@ import {
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import dayjs       from "dayjs";
 import useCrudList from "../../../hooks/useCrudList";
-import AdminCard   from "../../atoms/AdminCard";
-
+import AdminCard from "../../molecules/AdminCard";
 const emptySemester = {
   start_date: dayjs().format("YYYY-MM-DD"),
   end_date:   dayjs().add(4, "month").format("YYYY-MM-DD"),

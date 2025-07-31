@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import DashboardIcon  from "@mui/icons-material/Dashboard";
 import AdminNavbar    from "../organisms/admin/AdminNavbar";
-import AdminCard from "../atoms/AdminCard";
+import AdminCard from "../molecules/AdminCard";
 import SemesterPage   from "./admin/SemesterPage";
 import DepartmentPage from "./admin/DepartmentPage";
 import MajorPage      from "./admin/MajorPage";
@@ -19,6 +19,7 @@ export default function AdminDashboard() {
 
       {atRoot ? (
         <Box sx={{ maxWidth: 900, mx: "auto", py: 4 }}>
+          
           <Box display="flex" alignItems="center" justifyContent="center" mb={4}>
             <DashboardIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="h4" fontWeight={700}>Admin Portal</Typography>

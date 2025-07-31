@@ -4,7 +4,7 @@ import {
 } from "@mui/material";
 import BusinessIcon from "@mui/icons-material/Business";
 import useCrudList   from "../../../hooks/useCrudList";
-import AdminCard     from "../../atoms/AdminCard";
+import AdminCard from "../../molecules/AdminCard";
 
 const emptyDept = { department_name: "", location: "" };
 
@@ -57,6 +57,9 @@ export default function DepartmentPage({ isFormOnly = false }) {
 
   /* list view */
   const { items, loading, error, setError } = useCrudList("departments", {});
+  // right after useCrudList
+console.log("Departments from API:", items);
+
 
   return (
     <AdminCard>
