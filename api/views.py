@@ -323,7 +323,7 @@ class StudentSemesterCreateView(APIView):
         ser.is_valid(raise_exception=True)
         result = ser.save()           # {"record_id": "...", "semester_id": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
-    
+
 
 class StaffView(APIView):
     """
@@ -432,4 +432,74 @@ class MemberListView(APIView):
 
         # 3. let DRF serializer handle final JSON output
         data = MemberItemSerializer(members, many=True).data
+        return Response(data, status=status.HTTP_200_OK)
+    
+
+class GenericAdminDeleteView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    TABLES = {
+        "courses":  ("delete_course",  "cid"),
+        "members":  ("delete_member",  "mid"),
+        "semesters":("delete_semester","sid"),
+        "majors":   ("delete_major", "major_id"),
+        # add more mappings here
+    }
+
+    def delete(self, request, resource, pk):
+        if resource not in self.TABLES:
+            return Response({"detail": "Unknown resource"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        proc_name, _ = self.TABLES[resource]
+        try:
+            call_procedure(proc_name, (pk,))
+        except DBError as e:
+            return Response({"detail": e.msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class SectionStudentListView(APIView):
+    """
+    GET /api/presented-courses/<pcid>/students
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _prof_owns_section(self, pcid, user_id):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT prof_id FROM presented_courses WHERE pcid=%s",
+                (pcid,)
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None          # section not found
+        return row[0] == user_id
+
+    def get(self, request, pcid):
+        # 1. auth check
+        if not request.user.is_staff:          # non-admin professor
+            owns = self._prof_owns_section(pcid, request.user.id)
+            if owns is None:
+                return Response({"detail": "Section not found"},
+                                status=status.HTTP_404_NOT_FOUND)
+            if not owns:
+                raise PermissionDenied("You do not teach this section")
+
+        # 2. fetch roster
+        rows = call_procedure("list_students_in_section", (pcid,))
+        data = SectionStudentItemSerializer(
+            [
+                {
+                    "student_number": r[0],
+                    "fname":          r[1],
+                    "lname":          r[2],
+                    "status":         r[3],
+                    "grade":          r[4],
+                }
+                for r in rows
+            ],
+            many=True
+        ).data
+
         return Response(data, status=status.HTTP_200_OK)

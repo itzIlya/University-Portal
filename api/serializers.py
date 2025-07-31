@@ -479,3 +479,11 @@ class MemberItemSerializer(serializers.Serializer):
     birthday     = serializers.DateField()
     username     = serializers.CharField(allow_null=True)
     last_login   = serializers.DateTimeField(allow_null=True)
+
+
+class SectionStudentItemSerializer(serializers.Serializer):
+    student_number = serializers.CharField()
+    fname          = serializers.CharField()
+    lname          = serializers.CharField()
+    status         = serializers.CharField()
+    grade          = serializers.DecimalField(max_digits=3, decimal_places=1, allow_null=True)

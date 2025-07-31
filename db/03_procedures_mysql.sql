@@ -51,24 +51,19 @@ END//
 /*───────────────────────────────────────────────────────────────
   register_student.sql   – create / replace procedure
 ───────────────────────────────────────────────────────────────*/
-
 DROP PROCEDURE IF EXISTS register_student//
 CREATE PROCEDURE register_student (
     IN  p_national_id  CHAR(20),
     IN  p_major_name   VARCHAR(150)
 )
 BEGIN
-    -- --------------------------------------------------------------
-    -- DECLAREs first
-    -- --------------------------------------------------------------
-    DECLARE v_mid        CHAR(36);
-    DECLARE v_major_id   CHAR(36);
-    DECLARE v_record_id  CHAR(36);
-    DECLARE v_active_sem CHAR(36);
+    DECLARE v_mid            CHAR(36);
+    DECLARE v_major_id       CHAR(36);
+    DECLARE v_record_id      CHAR(36);
+    DECLARE v_active_sem     CHAR(36);
+    DECLARE v_student_number CHAR(10);
 
-    -- --------------------------------------------------------------
-    -- 1. resolve member
-    -- --------------------------------------------------------------
+    /* 1. resolve member ------------------------------------------------ */
     SELECT mid
       INTO v_mid
       FROM members
@@ -77,12 +72,10 @@ BEGIN
 
     IF v_mid IS NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'No member with that national_id';
+          SET MESSAGE_TEXT = 'No member with that national_id';
     END IF;
 
-    -- --------------------------------------------------------------
-    -- 2. resolve major
-    -- --------------------------------------------------------------
+    /* 2. resolve major -------------------------------------------------- */
     SELECT major_id
       INTO v_major_id
       FROM majors
@@ -91,23 +84,19 @@ BEGIN
 
     IF v_major_id IS NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'No such major';
+          SET MESSAGE_TEXT = 'No such major';
     END IF;
 
-    -- --------------------------------------------------------------
-    -- 3. duplicate check  (mid, major) unique
-    -- --------------------------------------------------------------
+    /* 3. duplicate check ----------------------------------------------- */
     IF EXISTS (
         SELECT 1 FROM std_records
          WHERE mid = v_mid AND major_id = v_major_id
     ) THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'Student already registered for this major';
+          SET MESSAGE_TEXT = 'Student already registered for this major';
     END IF;
 
-    -- --------------------------------------------------------------
-    -- 4. find the active semester (latest by start_date)
-    -- --------------------------------------------------------------
+    /* 4. get active semester ------------------------------------------- */
     SELECT sid
       INTO v_active_sem
       FROM semesters
@@ -117,27 +106,33 @@ BEGIN
 
     IF v_active_sem IS NULL THEN
         SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'No active semester defined';
+          SET MESSAGE_TEXT = 'No active semester defined';
     END IF;
 
-    -- - -------------------------------------------------------------
-    -- 5. insert std_record with entrance_sem
-    -- --------------------------------------------------------------
-    INSERT INTO std_records (mid, major_id, entrance_sem)
-    VALUES (v_mid, v_major_id, v_active_sem);
+    /* 5. generate a UNIQUE 10-char student number ---------------------- */
+    SET v_student_number = SUBSTRING(REPLACE(UUID(),'-',''),1,10);
 
-    -- -------------------------------------------------------------
-    -- 6. return the new record_id
-    -- --------------------------------------------------------------
-    SELECT record_id
-      INTO v_record_id
+    WHILE EXISTS (
+        SELECT 1 FROM std_records WHERE student_number = v_student_number
+    ) DO
+        SET v_student_number = SUBSTRING(REPLACE(UUID(),'-',''),1,10);
+    END WHILE;
+
+    /* 6. insert the record --------------------------------------------- */
+    INSERT INTO std_records (mid, major_id, entrance_sem, student_number)
+    VALUES (v_mid, v_major_id, v_active_sem, v_student_number);
+
+    /* 7. return record_id + student_number ----------------------------- */
+    SELECT record_id, v_student_number AS student_number, v_active_sem AS entrance_sem
+      INTO v_record_id, v_student_number, v_active_sem
       FROM std_records
      WHERE mid = v_mid AND major_id = v_major_id
      LIMIT 1;
 
-    SELECT v_record_id AS record_id, v_active_sem AS entrance_sem;
+    SELECT v_record_id   AS record_id,
+           v_student_number AS student_number,
+           v_active_sem  AS entrance_sem;
 END//
-
 
 
 /*───────────────────────────────────────────────────────────────
@@ -787,6 +782,68 @@ BEGIN
         c.last_login
     FROM   members      AS m
     LEFT   JOIN credentials AS c ON c.member_id = m.mid
+    ORDER  BY m.lname, m.fname;
+END//
+
+
+
+
+
+
+
+
+
+/*------------------- ADMIN DELETES -----------------*/
+DROP PROCEDURE IF EXISTS delete_course//
+CREATE PROCEDURE delete_course (IN p_cid CHAR(36))
+BEGIN
+    DELETE FROM courses WHERE cid = p_cid;
+END//
+
+DROP PROCEDURE IF EXISTS delete_presented_course//
+CREATE PROCEDURE delete_presented_course (IN p_Pcid CHAR(36))
+BEGIN
+    DELETE FROM presented_courses WHERE presented_courses.pcid = p_pcid;
+END//
+
+DROP PROCEDURE IF EXISTS delete_semester//
+CREATE PROCEDURE delete_semester (IN p_sid CHAR(36))
+BEGIN
+    DELETE FROM semesters WHERE sid = p_sid;
+END//
+
+DROP PROCEDURE IF EXISTS delete_department//
+CREATE PROCEDURE delete_department (IN p_did CHAR(36))
+BEGIN
+    DELETE FROM departments WHERE sid = did;
+END//
+
+DROP PROCEDURE IF EXISTS delete_major//
+CREATE PROCEDURE delete_major (IN p_major_id CHAR(36))
+BEGIN
+    DELETE FROM majors WHERE major_id = p_major_id;
+END//
+
+
+
+DROP PROCEDURE IF EXISTS list_students_in_section//
+CREATE PROCEDURE list_students_in_section (IN p_pcid CHAR(36))
+BEGIN
+    /*
+      Returns every student who has a row in taken_courses for this section.
+      status ∈ {RESERVED, TAKING, COMPLETED}
+    */
+    SELECT
+        sr.student_number,
+        m.fname,
+        m.lname,
+        tc.status,
+        tc.grade
+    FROM   taken_courses      tc
+    JOIN   student_semesters  ss ON ss.record_id       = tc.record_id and ss.semester_id = tc.semester_id
+    JOIN   std_records        sr ON sr.record_id  = ss.record_id
+    JOIN   members            m  ON m.mid         = sr.mid
+    WHERE  tc.pcid = p_pcid
     ORDER  BY m.lname, m.fname;
 END//
 DELIMITER ;

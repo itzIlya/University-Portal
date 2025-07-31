@@ -9,18 +9,36 @@ urlpatterns = [
     path("signup", SignupView.as_view(), name="signup"),
     path("signin", SignInView.as_view()),
     path("signout", SignOutView.as_view()),
+
     path("semesters", SemesterView.as_view(), name="semester-create"),
+
     path("departments", DepartmentView.as_view(), name="department-create"),
+
     path("majors", MajorView.as_view(), name="major-create"),
+
     path("student-records", StudentRecordCreateView.as_view(), name="student-record-create"),
     #path("staff", StaffPromoteView.as_view(), name="staff-promote"),
     path("staff-roles", StaffRoleCreateView.as_view(), name="staff-role-create"),
+
     path("courses", CourseView.as_view(), name="courses"),
     path("presented-courses/create", PresentedCourseCreateView.as_view(), name="presented-course-create"),
     path("presented-courses", PresentedCourseListView.as_view(), name="presented-course-list"),
-    path("rooms", RoomView.as_view(), name="room-create"),
     path("student-semesters", StudentSemesterCreateView.as_view(), name="student-semester-create"),
-    path("staff", StaffView.as_view(), name="staff-endpoint"),
     path("taken-courses", TakenCourseView.as_view(), name="taken-course"),
-     path("members", MemberListView.as_view(), name="member-list"),
+
+    path(
+            "presented-courses/<uuid:pcid>/students",
+            SectionStudentListView.as_view(),
+            name="section-student-list",
+        ),
+        
+    path("rooms", RoomView.as_view(), name="room-create"),
+
+    
+    path("staff", StaffView.as_view(), name="staff-endpoint"),
+    path("members", MemberListView.as_view(), name="member-list"),
+    
+    path("admin/<str:resource>/<uuid:pk>",
+     GenericAdminDeleteView.as_view(),
+     name="admin-generic-delete"),
 ]
