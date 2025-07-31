@@ -8,6 +8,7 @@ import AdminDashboard from "./components/pages/AdminDashboard";
 import SemesterPage from "./components/pages/admin/SemesterPage";
 import DepartmentPage from "./components/pages/admin/DepartmentPage";
 import MajorPage from "./components/pages/admin/MajorPage";
+import MemberPage from "./components/pages/admin/MemberPage";
 
 function App() {
   return (
@@ -28,7 +29,10 @@ function App() {
         <Route path="semesters" element={<SemesterPage />} />
         <Route path="departments" element={<DepartmentPage />} />
         <Route path="majors" element={<MajorPage />} />
+        <Route path="members"     element={<MemberPage />} /> 
       </Route>
+
+
     </Routes>
   );
 }
