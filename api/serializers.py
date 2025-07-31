@@ -204,6 +204,7 @@ class DepartmentListSerializer(serializers.ListSerializer):
             {
                 "did":        row[0],
                 "department_name": row[1],
+                "location": row[2],
             }
             for row in data
         ]
@@ -278,17 +279,24 @@ class StaffPromoteSerializer(serializers.Serializer):
     
 
 class CourseCreateSerializer(serializers.Serializer):
+    course_code = serializers.CharField(max_length=20)
     course_name = serializers.CharField(max_length=200)
 
     def create(self, validated):
         try:
-            rows = call_procedure("add_course", (validated["course_name"],))
+            rows = call_procedure(
+                "add_course",
+                (
+                    validated["course_name"],
+                    validated["course_code"],
+                    
+                ),
+            )
         except DBError as e:
-            # 'course_name already exists'
+            # 'course_code already exists'  or  'course_name already exists'
             raise serializers.ValidationError({"detail": e.msg})
 
         return {"cid": rows[0][0]}
-    
 class PresentedCourseCreateSerializer(serializers.Serializer):
     prof_national_id = serializers.CharField(max_length=20)
     course_name      = serializers.CharField(max_length=200)
@@ -356,3 +364,89 @@ class StudentSemesterCreateSerializer(serializers.Serializer):
             "record_id":   validated["record_id"],
             "semester_id": rows[0][0],
         }   
+
+
+VALID_ROLES = ["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF"]
+
+class StaffByRoleQuerySerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=VALID_ROLES)
+
+    def fetch(self):
+        role = self.validated_data["role"]
+        try:
+            rows = call_procedure("list_staff_by_role", (role,))
+        except DBError as e:
+            # Only 'Invalid staff_role' possible here, already filtered by ChoiceField
+            raise serializers.ValidationError({"detail": e.msg})
+
+        # rows: (staff_id, fname, lname, role, department_name)
+        return [
+            {
+                "staff_id": row[0],
+                "fname":    row[1],
+                "lname":    row[2],
+                "role":     row[3],
+                "department_name": row[4],
+            }
+            for row in rows
+        ]
+    
+class CourseItemSerializer(serializers.Serializer):
+    cid         = serializers.CharField()
+    course_code = serializers.CharField()
+    course_name = serializers.CharField()
+
+class PresentedCourseListQuerySerializer(serializers.Serializer):
+    semester_id   = serializers.CharField(max_length=36)
+    department_id = serializers.CharField(max_length=36)
+
+    def fetch(self):
+        try:
+            rows = call_procedure(
+                "list_presented_courses",
+                (
+                    self.validated_data["semester_id"],
+                    self.validated_data["department_id"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return [
+            {
+                "pcid":          r[0],
+                "course_code":   r[1],
+                "course_name":   r[2],
+                "professor":     r[3],
+                "on_days":       r[4],
+                "on_times":      r[5],
+                "room":          r[6],
+                "capacity":      r[7],
+                "max_capacity":  r[8],
+            }
+            for r in rows
+        ]
+    
+class TakenCourseCreateSerializer(serializers.Serializer):
+    record_id   = serializers.CharField(max_length=36)
+    semester_id = serializers.CharField(max_length=36)
+    pcid        = serializers.CharField(max_length=36)
+    status      = serializers.ChoiceField(
+        choices=["RESERVED", "TAKING", "COMPLETED"],
+        default="RESERVED"
+    )
+
+    def create(self, validated):
+        try:
+            call_procedure(
+                "add_taken_course_tx",
+                (
+                    validated["record_id"],
+                    validated["semester_id"],
+                    validated["pcid"],
+                    validated["status"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+        return validated

@@ -214,31 +214,49 @@ class StaffRoleCreateView(APIView):
         result = ser.save()
         return Response(result, status=status.HTTP_201_CREATED)
     
-class StaffPromoteView(APIView):
-    """
-    POST /api/staff
-    Body: { "national_id": "X123456789" }
-    Promotes an existing member to staff (idempotent).
-    """
-    permission_classes = [permissions.IsAdminUser]   # admin‑only
+# class StaffPromoteView(APIView):
+#     """
+#     POST /api/staff
+#     Body: { "national_id": "X123456789" }
+#     Promotes an existing member to staff (idempotent).
+#     """
+#     permission_classes = [permissions.IsAdminUser]   # admin‑only
 
-    def post(self, request):
-        ser = StaffPromoteSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        result = ser.save()               # {"staff_id": "..."}
-        return Response(result, status=status.HTTP_201_CREATED)
+#     def post(self, request):
+#         ser = StaffPromoteSerializer(data=request.data)
+#         ser.is_valid(raise_exception=True)
+#         result = ser.save()               # {"staff_id": "..."}
+#         return Response(result, status=status.HTTP_201_CREATED)
     
-class CourseCreateView(APIView):
+class CourseView(APIView):
     """
-    POST /api/courses
-    Body: { "course_name": "Calculus I" }
+    GET  /api/courses  → list
+    POST /api/courses  → create (admin)
     """
-    permission_classes = [permissions.IsAdminUser]   # admin‑only
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+    # ---------- GET list --------------------------------------
+    def get(self, request):
+        rows = call_procedure("list_courses", ())
+        data = CourseItemSerializer(
+            [
+                {"cid": r[0],"course_code":r[1], "course_name": r[2]}
+                for r in rows
+            ],
+            many=True
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+
+    # ---------- POST create (you already have this) -----------
     def post(self, request):
         ser = CourseCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        result = ser.save()      # {"cid": "..."}
+        result = ser.save()          # {"cid": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
     
 class PresentedCourseCreateView(APIView):
@@ -304,3 +322,86 @@ class StudentSemesterCreateView(APIView):
         ser.is_valid(raise_exception=True)
         result = ser.save()           # {"record_id": "...", "semester_id": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class StaffView(APIView):
+    """
+    GET  /api/staff?role=PROF     -> list professors
+    POST /api/staff               -> promote member to staff (admin)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    # per‑method permissions
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+    # ---------- GET staff list by role -------------------------
+    def get(self, request):
+        ser = StaffByRoleQuerySerializer(data=request.query_params)
+        ser.is_valid(raise_exception=True)
+        data = ser.fetch()            # list[dict]
+        return Response(data, status=status.HTTP_200_OK)
+
+    # ---------- POST promote member to staff -------------------
+    def post(self, request):
+        ser = StaffPromoteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()           # {"staff_id": "..."}
+        return Response(result, status=status.HTTP_201_CREATED)
+    
+
+class PresentedCourseListView(APIView):
+    """
+    GET /api/presented-courses?semester_id=<sid>&department_id=<did>
+ 
+    • Any authenticated user can call.
+    • JSON array of sections that match both filters.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        ser = PresentedCourseListQuerySerializer(data=request.query_params)
+        ser.is_valid(raise_exception=True)
+        data = ser.fetch()
+        return Response(data, status=status.HTTP_200_OK)
+    
+
+class TakenCourseCreateView(APIView):
+    """
+    POST /api/taken-courses
+    {
+      "record_id":   "<record>",
+      "semester_id": "<sid>",
+      "pcid":        "<presented_course>"
+    }
+
+    • Any authenticated student can enrol *their own* record.
+    • Admins/staff can enrol any record.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        data = request.data
+        record_id = data.get("record_id")
+
+        # ----- ownership check (skip for admins) -----------------
+        if not request.user.is_staff:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
+                    (record_id, request.user.id),
+                )
+                if cur.fetchone() is None:
+                    return Response(
+                        {"detail": "You do not own this student record"},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+        # ----- call serializer / procedure -----------------------
+        ser = TakenCourseCreateSerializer(data=data)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+
+        return Response({"enrolled": True}, status=status.HTTP_201_CREATED)

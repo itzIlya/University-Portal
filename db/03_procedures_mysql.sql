@@ -331,7 +331,8 @@ BEGIN
 
     */
     SELECT did,
-           department_name
+           department_name,
+           location
       FROM departments;
 END//
 
@@ -431,7 +432,8 @@ END//
 
 DROP PROCEDURE IF EXISTS add_course//
 CREATE PROCEDURE add_course (
-    IN p_course_name VARCHAR(200)
+    IN p_course_name VARCHAR(200),
+    IN P_course_code VARCHAR(10)
 )
 BEGIN
     DECLARE v_cid CHAR(36) DEFAULT (UUID());
@@ -441,8 +443,12 @@ BEGIN
         SIGNAL SQLSTATE '45000'
           SET MESSAGE_TEXT = 'course_name already exists';
     END IF;
+    IF EXISTS (SELECT 1 FROM courses WHERE course_code = P_course_code) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'course_code already exists';
+    END IF;
 
-    INSERT INTO courses (cid, course_name) VALUES (v_cid, p_course_name);
+    INSERT INTO courses (cid,course_code ,course_name) VALUES (v_cid,P_course_code, p_course_name);
 
     SELECT v_cid AS cid;
 END//
@@ -591,4 +597,140 @@ BEGIN
     /*── 4. return semester UUID ───────────────────────────────*/
     SELECT v_sem_id AS semester_id;
 END//
+
+DROP PROCEDURE IF EXISTS list_staff_by_role//
+CREATE PROCEDURE list_staff_by_role (
+    IN p_staff_role ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF')
+)
+BEGIN
+    /*── validate argument --------------------------------------*/
+    IF p_staff_role NOT IN ('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF') THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Invalid staff_role';
+    END IF;
+
+    /*── return distinct staff for that role -------------------*/
+    SELECT DISTINCT
+           m.mid            AS staff_id,
+           m.fname,
+           m.lname,
+           w.staff_role,
+           d.department_name
+    FROM   workers     w
+    JOIN   members     m ON m.mid = w.member_id
+    LEFT   JOIN departments d ON d.did = w.did
+    WHERE  w.staff_role = p_staff_role
+    ORDER  BY d.department_name, m.lname, m.fname;
+END//
+
+DROP PROCEDURE IF EXISTS list_courses//
+CREATE PROCEDURE list_courses ()
+BEGIN
+    SELECT
+        cid,
+        course_code,
+        course_name
+    FROM   courses
+    ORDER  BY course_name ASC;
+END//
+
+
+
+DROP PROCEDURE IF EXISTS list_presented_courses//
+CREATE PROCEDURE list_presented_courses (
+    IN p_semester_id   CHAR(36),
+    IN p_department_id CHAR(36)
+)
+BEGIN
+    /*
+      Returns every presented_courses row
+      • in the requested semester
+      • whose professor has a worker‑record in the requested department
+      Columns returned are suitable for the front‑end schedule list.
+    */
+    SELECT  DISTINCT
+            pc.pcid,
+            c.course_code,
+            c.course_name,
+            CONCAT(m.fname, ' ', m.lname) AS professor,
+            pc.on_days,
+            pc.on_times,
+            COALESCE(r.room_label, 'TBA') AS room,
+            pc.capacity,
+            pc.max_capacity
+    FROM    presented_courses pc
+    JOIN    courses      c  ON c.cid  = pc.course_id
+    JOIN    members      m  ON m.mid  = pc.prof_id        -- professor name
+    JOIN    workers      w  ON w.member_id = pc.prof_id
+    LEFT    JOIN rooms   r  ON r.rid  = pc.room_id
+    WHERE   pc.semester_id = p_semester_id
+      AND   w.did = p_department_id;
+END//
+
+
+DROP PROCEDURE IF EXISTS add_taken_course_tx//
+CREATE PROCEDURE add_taken_course_tx (
+    IN p_record_id   CHAR(36),
+    IN p_semester_id CHAR(36),
+    IN p_pcid        CHAR(36),
+    IN p_status      ENUM('RESERVED','TAKING','COMPLETED')
+)
+BEGIN
+    DECLARE v_max      INT;
+    DECLARE v_taken    INT;
+    DECLARE v_pc_sem   CHAR(36);
+
+    /* 0. start transaction */
+    START TRANSACTION;
+
+    /* 1. lock the section row */
+    SELECT semester_id, max_capacity
+      INTO v_pc_sem, v_max
+      FROM presented_courses
+     WHERE pcid = p_pcid
+       FOR UPDATE;
+
+    IF v_pc_sem IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'presented_course not found';
+    END IF;
+    IF v_pc_sem <> p_semester_id THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Course not offered that semester';
+    END IF;
+
+    /* 2. verify student_semester row exists */
+    IF NOT EXISTS (
+        SELECT 1 FROM student_semesters
+         WHERE record_id = p_record_id AND semester_id = p_semester_id
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'student_semester not found';
+    END IF;
+
+    /* 3. duplicate enrolment check */
+    IF EXISTS (
+        SELECT 1 FROM taken_courses
+         WHERE record_id = p_record_id
+           AND semester_id = p_semester_id
+           AND pcid = p_pcid
+    ) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Already recorded for this section';
+    END IF;
+
+    /* 4. capacity check (count only RESERVED + TAKING) */
+    SELECT COUNT(*) INTO v_taken
+      FROM taken_courses
+     WHERE pcid = p_pcid
+       AND status IN ('RESERVED','TAKING')
+       FOR UPDATE;
+
+    IF v_taken >= v_max THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Section is full';
+    END IF;
+
+    /* 5. insert */
+    INSERT INTO taken_courses (record_id, semester_id, pcid, status)
+    VALUES (p_record_id, p_semester_id, p_pcid, p_status);
+
+    COMMIT;
+END//
+
 DELIMITER ;

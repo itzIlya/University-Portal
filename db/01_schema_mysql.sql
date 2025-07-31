@@ -112,6 +112,7 @@ CREATE TABLE rooms (
 
 CREATE TABLE courses (
     cid         CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    course_code VARCHAR(10) NOT NULL UNIQUE,
     course_name VARCHAR(200) NOT NULL UNIQUE
 ) ENGINE = InnoDB;
 
@@ -158,6 +159,7 @@ CREATE TABLE taken_courses (
     record_id   CHAR(36) NOT NULL,
     semester_id CHAR(36) NOT NULL,
     pcid        CHAR(36) NOT NULL,        -- FK → presented_courses
+    status ENUM('RESERVED','TAKING','COMPLETED') NOT NULL DEFAULT 'RESERVED',
     grade       DECIMAL(3,1),
     PRIMARY KEY (record_id, semester_id, pcid),
     FOREIGN KEY (record_id, semester_id)
