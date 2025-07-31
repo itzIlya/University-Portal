@@ -76,7 +76,7 @@ CREATE TABLE std_records (
     gpa       DECIMAL(4,3),
     major_id  CHAR(36) NOT NULL,   -- FK → majors
     entrance_sem CHAR(36) NOT NULL,
-    student_number CHAR(10) NOT NULL UNIQUE
+    student_number CHAR(10) NOT NULL UNIQUE,
     UNIQUE KEY uq_student_major (mid, major_id),
     FOREIGN KEY (entrance_sem) REFERENCES semesters(sid),
     FOREIGN KEY (mid)      REFERENCES members(mid),
