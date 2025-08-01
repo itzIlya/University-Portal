@@ -284,8 +284,29 @@ class PresentedCourseCreateView(APIView):
     
 class RoomView(APIView):
 
-    permission_classes = [permissions.IsAdminUser]
+    """
+    GET  /api/rooms   → list (any authenticated user)
+    POST /api/rooms   → create (admin)
+    """
+    permission_classes = [permissions.IsAuthenticated]  # default; we’ll override
 
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+    # ---------- GET (list) ----------
+    def get(self, request):
+        rows = call_procedure("list_rooms", ())
+        data = RoomItemSerializer(
+            [
+                {"rid": r[0], "room_label": r[1], "capacity": r[2]}
+                for r in rows
+            ],
+            many=True
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+    
     def post(self, request):
         ser = RoomCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
@@ -650,3 +671,35 @@ class SemesterDeactivateView(APIView):
             {"deactivated": True, "sid": sid, "end_date": row[0]},
             status=status.HTTP_200_OK,
         )
+
+class StatusUpdateView(APIView):
+    """
+    POST /api/taken-courses/status
+    Body: { "record_id": "...", "pcid": "...", "to_status":"TAKING" }
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _prof_teaches(self, pcid, user_id):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM presented_courses WHERE pcid=%s AND prof_id=%s",
+                (pcid, user_id),
+            )
+            return cur.fetchone() is not None
+
+    def post(self, request):
+        if not request.user.is_staff:
+            if not self._prof_teaches(request.data.get("pcid"), request.user.id):
+                raise PermissionDenied("You do not teach this section")
+
+        ser = StatusUpdateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ser.save(request.user.id, request.user.is_staff)
+
+        return Response(
+            {"status_changed": True, "to": "TAKING"},
+            status=status.HTTP_200_OK,
+        )
+
+
+

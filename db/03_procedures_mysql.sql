@@ -1005,4 +1005,62 @@ BEGIN
     END IF;
 END//
 
+DROP PROCEDURE IF EXISTS set_reserved_to_taking_tx//
+CREATE PROCEDURE set_reserved_to_taking_tx (
+    IN p_prof_id   CHAR(36),  -- caller’s member id
+    IN p_is_admin  BOOLEAN,   -- TRUE if admin user
+    IN p_record_id CHAR(36),
+    IN p_pcid      CHAR(36)
+)
+BEGIN
+    DECLARE v_prof_id     CHAR(36);
+    DECLARE v_semester_id CHAR(36);
+
+    START TRANSACTION;
+
+    /* 1. lock the section row & fetch professor + semester --------- */
+    SELECT prof_id, semester_id
+      INTO v_prof_id, v_semester_id
+      FROM presented_courses
+     WHERE pcid = p_pcid
+       FOR SHARE;              -- shared lock, row exists check
+
+    IF v_prof_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'presented_course not found';
+    END IF;
+
+    /* 2. permission: non-admin must teach the section -------------- */
+    IF NOT p_is_admin AND v_prof_id <> p_prof_id THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'You do not teach this section';
+    END IF;
+
+    /* 3. update status only if row exists in RESERVED -------------- */
+    UPDATE taken_courses
+       SET status = 'TAKING'
+     WHERE record_id   = p_record_id
+       AND semester_id = v_semester_id
+       AND pcid        = p_pcid
+       AND status      = 'RESERVED';
+
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'Row not in RESERVED state';
+    END IF;
+
+    COMMIT;
+END//
+
+DROP PROCEDURE IF EXISTS list_rooms//
+CREATE PROCEDURE list_rooms ()
+BEGIN
+    SELECT
+        rid,
+        room_label,
+        capacity
+    FROM rooms
+    ORDER BY room_label;
+END//
+
 DELIMITER ;

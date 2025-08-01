@@ -56,5 +56,7 @@ urlpatterns = [
         SemesterDeactivateView.as_view(),
         name="semester-deactivate",
     ),
+    path("taken-courses/status", StatusUpdateView.as_view(), name="course-status-update"),
+   
 
 ]

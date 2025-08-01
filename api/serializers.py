@@ -545,3 +545,29 @@ class SemesterDeactivateSerializer(serializers.Serializer):
             raise serializers.ValidationError({"detail": e.msg})
 
         return sid
+    
+class StatusUpdateSerializer(serializers.Serializer):
+    record_id = serializers.CharField(max_length=36)
+    pcid      = serializers.CharField(max_length=36)
+    to_status = serializers.ChoiceField(choices=["TAKING"], default="TAKING")
+
+    def save(self, professor_id, is_admin):
+        vals = self.validated_data
+        try:
+            call_procedure(
+                "set_reserved_to_taking_tx",
+                (
+                    professor_id,
+                    is_admin,
+                    vals["record_id"],
+                    vals["pcid"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+        return vals
+    
+class RoomItemSerializer(serializers.Serializer):
+    rid         = serializers.CharField()
+    room_label  = serializers.CharField()
+    capacity    = serializers.IntegerField()
