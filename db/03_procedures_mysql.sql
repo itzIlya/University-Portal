@@ -321,14 +321,23 @@ END//
 DROP PROCEDURE IF EXISTS list_departments//
 CREATE PROCEDURE list_departments ()
 BEGIN
-    /*
-       Returns every department with its attributes,
-
-    */
-    SELECT did,
-           department_name,
-           location
-      FROM departments;
+    /* Every department + its current head, if any */
+    SELECT
+        d.did,
+        d.department_name,
+        d.location,
+        w.member_id            AS head_mid,
+        CONCAT(m.fname,' ',m.lname) AS head_name
+    FROM departments            AS d
+    /* one current HEAD per department (if defined) */
+    LEFT JOIN workers           AS w
+           ON w.did = d.did
+          AND w.staff_role = 'HEAD'
+          AND w.end_date  IS NULL
+    /* (optional) human-readable name of the head */
+    LEFT JOIN members           AS m
+           ON m.mid = w.member_id
+    ORDER BY d.department_name;
 END//
 
 DROP PROCEDURE IF EXISTS list_majors//
@@ -987,24 +996,6 @@ BEGIN
 END//
 
 
-
-
-
-/* #################################---------------------------------################################# */
-/* #################################| ***************************** |################################# */
-/* #################################| *          TRIGGERS         * |################################# */
-/* #################################| ***************************** |################################# */
-/* #################################|-------------------------------|################################# */
-DROP TRIGGER IF EXISTS sem_before_update//
-CREATE TRIGGER sem_before_update
-BEFORE UPDATE ON semesters
-FOR EACH ROW
-BEGIN
-    IF OLD.is_active = TRUE AND NEW.is_active = FALSE THEN
-        SET NEW.end_date = CURDATE();
-    END IF;
-END//
-
 DROP PROCEDURE IF EXISTS set_reserved_to_taking_tx//
 CREATE PROCEDURE set_reserved_to_taking_tx (
     IN p_prof_id   CHAR(36),  -- caller’s member id
@@ -1062,5 +1053,42 @@ BEGIN
     FROM rooms
     ORDER BY room_label;
 END//
+
+
+
+
+/* #################################---------------------------------################################# */
+/* #################################| ***************************** |################################# */
+/* #################################| *          TRIGGERS         * |################################# */
+/* #################################| ***************************** |################################# */
+/* #################################|-------------------------------|################################# */
+DROP TRIGGER IF EXISTS sem_before_update//
+CREATE TRIGGER sem_before_update
+BEFORE UPDATE ON semesters
+FOR EACH ROW
+BEGIN
+    IF OLD.is_active = TRUE AND NEW.is_active = FALSE THEN
+        SET NEW.end_date = CURDATE();
+    END IF;
+END//
+
+
+CREATE TRIGGER trg_one_head_per_dept
+BEFORE INSERT ON workers
+FOR EACH ROW
+BEGIN
+    IF NEW.staff_role = 'HEAD'
+       AND NEW.end_date IS NULL
+       AND EXISTS (SELECT 1
+                     FROM workers
+                    WHERE did = NEW.did
+                      AND staff_role = 'HEAD'
+                      AND end_date IS NULL)
+    THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'That department already has a head';
+    END IF;
+END//
+
 
 DELIMITER ;

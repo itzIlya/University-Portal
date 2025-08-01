@@ -204,7 +204,8 @@ class DepartmentListSerializer(serializers.ListSerializer):
             {
                 "did":        row[0],
                 "department_name": row[1],
-                "location": row[2],
+                "department_head": row[2],
+                "location": row[3],
             }
             for row in data
         ]
@@ -229,7 +230,7 @@ class StaffRoleCreateSerializer(serializers.Serializer):
     national_id      = serializers.CharField(max_length=20)
     department_name  = serializers.CharField(max_length=150)
     staff_role       = serializers.ChoiceField(
-        choices=["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF"]
+        choices=["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF", "HEAD"]
     )
     start_date       = serializers.DateField()
     end_date         = serializers.DateField(allow_null=True, required=False)
