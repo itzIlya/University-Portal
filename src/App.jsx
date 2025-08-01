@@ -9,6 +9,9 @@ import SemesterPage from "./components/pages/admin/SemesterPage";
 import DepartmentPage from "./components/pages/admin/DepartmentPage";
 import MajorPage from "./components/pages/admin/MajorPage";
 import MemberPage from "./components/pages/admin/MemberPage";
+import CourseCreatePage from "./components/pages/admin/CourseCreatePage";
+import PresentedCoursePage from "./components/pages/admin/PresentedCoursePage";
+import RoomPage from "./components/pages/admin/RoomPage";
 
 function App() {
   return (
@@ -29,10 +32,11 @@ function App() {
         <Route path="semesters" element={<SemesterPage />} />
         <Route path="departments" element={<DepartmentPage />} />
         <Route path="majors" element={<MajorPage />} />
-        <Route path="members"     element={<MemberPage />} /> 
+        <Route path="members" element={<MemberPage />} />
+        <Route path="courses" element={<CourseCreatePage />} />
+        <Route path="rooms" element={<RoomPage />} />
+        <Route path="presented" element={<PresentedCoursePage />} />
       </Route>
-
-
     </Routes>
   );
 }
