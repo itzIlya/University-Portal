@@ -835,6 +835,7 @@ BEGIN
     */
     SELECT
         sr.student_number,
+        sr.record_id,
         m.fname,
         m.lname,
         tc.status,
@@ -846,4 +847,162 @@ BEGIN
     WHERE  tc.pcid = p_pcid
     ORDER  BY m.lname, m.fname;
 END//
+
+
+DROP PROCEDURE IF EXISTS list_sections_by_prof//
+CREATE PROCEDURE list_sections_by_prof (
+    IN p_prof_id CHAR(36)
+)
+BEGIN
+    SELECT
+        pc.pcid,
+        c.course_code,
+        c.course_name,
+        s.sem_title,
+        pc.on_days,
+        pc.on_times,
+        COALESCE(r.room_label,'TBA') AS room,
+        pc.capacity,
+        pc.max_capacity
+    FROM   presented_courses pc
+    JOIN   courses   c ON c.cid = pc.course_id
+    JOIN   semesters s ON s.sid = pc.semester_id
+    LEFT   JOIN rooms r ON r.rid = pc.room_id
+    WHERE  pc.prof_id = p_prof_id
+    ORDER  BY s.start_date DESC, c.course_code;
+END//
+
+
+DROP PROCEDURE IF EXISTS set_student_grade_tx//
+CREATE PROCEDURE set_student_grade_tx (
+    IN p_prof_id   CHAR(36),        -- professor / admin doing the update
+    IN p_record_id CHAR(36),        -- student’s record (degree file)
+    IN p_pcid      CHAR(36),        -- presented_courses id
+    IN p_grade     DECIMAL(3,1)     -- 0-20 (adjust scale as needed)
+)
+BEGIN
+    DECLARE v_prof_id     CHAR(36);
+    DECLARE v_semester_id CHAR(36);
+
+    /*── validate grade range (example 0-20) ───────────────────*/
+    IF p_grade < 0 OR p_grade > 20 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'grade must be between 0 and 20';
+    END IF;
+
+    START TRANSACTION;
+
+    /*── 1. lock the section; retrieve prof_id + semester_id ───*/
+    SELECT prof_id, semester_id
+      INTO v_prof_id, v_semester_id
+      FROM presented_courses
+     WHERE pcid = p_pcid
+       FOR SHARE;
+
+    IF v_prof_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'presented_course not found';
+    END IF;
+
+    IF v_prof_id <> p_prof_id THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'You do not teach this section';
+    END IF;
+
+    /*── 2. update the grade ----------------------------------*/
+    UPDATE taken_courses
+       SET grade  = p_grade,
+           status = 'COMPLETED'
+     WHERE record_id   = p_record_id
+       AND semester_id = v_semester_id
+       AND pcid        = p_pcid;
+
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'student not enrolled in this section';
+    END IF;
+
+    COMMIT;
+END//
+
+DROP PROCEDURE IF EXISTS list_record_courses//
+CREATE PROCEDURE list_record_courses (
+    IN p_record_id  CHAR(36),
+    IN p_semester_id CHAR(36)
+)
+BEGIN
+    /*
+      Returns every taken_courses row for ONE student record in ONE semester.
+    */
+    SELECT
+        pc.pcid,
+        c.course_code,
+        c.course_name,
+        tc.status,
+        tc.grade,
+        CONCAT(mp.fname,' ',mp.lname) AS professor,
+        pc.on_days,
+        pc.on_times,
+        pc.room_id  AS room
+    FROM   taken_courses       tc
+    JOIN   presented_courses   pc ON pc.pcid      = tc.pcid
+    JOIN   courses             c  ON c.cid        = pc.course_id
+    JOIN   staffs             st ON st.member_id       = pc.prof_id
+    JOIN members mp ON mp.mid = st.member_id
+    JOIN   rooms             ON pc.room_id       = rooms.rid
+    WHERE  tc.record_id   = p_record_id
+      AND  tc.semester_id = p_semester_id
+    ORDER  BY c.course_code;
+END//
+
+
+DROP PROCEDURE IF EXISTS deactivate_semester//
+CREATE PROCEDURE deactivate_semester (IN p_sid CHAR(36))
+BEGIN
+    DECLARE v_was_active BOOLEAN;
+
+    START TRANSACTION;
+
+    /* 1. flip the flag & set end_date = today ---------------------- */
+    UPDATE semesters
+       SET is_active = FALSE,
+           end_date  = CURDATE()
+     WHERE sid = p_sid;
+
+    /*  did we actually change anything?  */
+    SET v_was_active = (ROW_COUNT() > 0);
+
+    /* 2. if the semester existed, mark course rows ---------------- */
+    IF v_was_active THEN
+        UPDATE taken_courses
+           SET status = 'COMPLETED'
+         WHERE semester_id = p_sid
+           AND status <> 'COMPLETED';
+    ELSE
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'semester not found';
+    END IF;
+
+    COMMIT;
+END//
+
+
+
+
+
+/* #################################---------------------------------################################# */
+/* #################################| ***************************** |################################# */
+/* #################################| *          TRIGGERS         * |################################# */
+/* #################################| ***************************** |################################# */
+/* #################################|-------------------------------|################################# */
+DROP TRIGGER IF EXISTS sem_before_update//
+CREATE TRIGGER sem_before_update
+BEFORE UPDATE ON semesters
+FOR EACH ROW
+BEGIN
+    IF OLD.is_active = TRUE AND NEW.is_active = FALSE THEN
+        SET NEW.end_date = CURDATE();
+    END IF;
+END//
+
 DELIMITER ;

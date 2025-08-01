@@ -492,10 +492,11 @@ class SectionStudentListView(APIView):
             [
                 {
                     "student_number": r[0],
-                    "fname":          r[1],
-                    "lname":          r[2],
-                    "status":         r[3],
-                    "grade":          r[4],
+                    "record_id":      r[1],
+                    "fname":          r[2],
+                    "lname":          r[3],
+                    "status":         r[4],
+                    "grade":          r[5],
                 }
                 for r in rows
             ],
@@ -503,3 +504,149 @@ class SectionStudentListView(APIView):
         ).data
 
         return Response(data, status=status.HTTP_200_OK)
+    
+
+class MyPresentedCourseListView(APIView):
+    """
+    GET /api/my-presented-courses
+        → professor:       list their own sections
+        → admin:           same, or pass ?prof_id=<uuid> to inspect another
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # choose prof_id
+        prof_id = request.query_params.get("prof_id")
+        if prof_id:
+            if not request.user.is_staff:   # only admins may override
+                raise PermissionDenied("Only admins can specify prof_id")
+        else:
+            prof_id = request.user.id       # the logged-in professor / staff
+
+        rows = call_procedure("list_sections_by_prof", (prof_id,))
+        data = MySectionItemSerializer(
+            [
+                {
+                    "pcid":         r[0],
+                    "course_code":  r[1],
+                    "course_name":  r[2],
+                    "sem_title":    r[3],
+                    "on_days":      r[4],
+                    "on_times":     r[5],
+                    "room":         r[6],
+                    "capacity":     r[7],
+                    "max_capacity": r[8],
+                }
+                for r in rows
+            ],
+            many=True
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+    
+class GradeUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _prof_teaches(self, pcid, user_id):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM presented_courses WHERE pcid=%s AND prof_id=%s",
+                (pcid, user_id)
+            )
+            return cur.fetchone() is not None
+
+    def post(self, request):
+        if not request.user.is_staff:
+            if not self._prof_teaches(request.data.get("pcid"), request.user.id):
+                raise PermissionDenied("You do not teach this section")
+
+        ser = GradeUpdateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        ser.save(request.user.id)
+
+        return Response(
+            {"grade_set": True, "grade": ser.validated_data["grade"]},
+            status=status.HTTP_200_OK,
+        )
+    
+
+class RecordCourseListView(APIView):
+    """
+    GET /api/my-courses?record_id=<record>&semester_id=<sid>
+
+    • Student: may query only their own record.
+    • Admin   : may query any record.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _owns_record(self, record_id, user_id):
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
+                (record_id, user_id),
+            )
+            return cur.fetchone() is not None
+
+    def get(self, request):
+        record_id   = request.query_params.get("record_id")
+        semester_id = request.query_params.get("semester_id")
+
+        if not record_id or not semester_id:
+            return Response(
+                {"detail": "record_id and semester_id are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # permission: non-admin must own the record
+        if not request.user.is_staff and not self._owns_record(record_id, request.user.id):
+            raise PermissionDenied("You do not own this student record")
+
+        # fetch
+        try:
+            rows = call_procedure("list_record_courses", (record_id, semester_id))
+        except DBError as e:
+            return Response({"detail": e.msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = RecordCourseItemSerializer(
+            [
+                {
+                    "pcid":        r[0],
+                    "course_code": r[1],
+                    "course_name": r[2],
+                    "status":      r[3],
+                    "grade":       r[4],
+                    "professor":   r[5],
+                    "on_days":     r[6],
+                    "on_times":    r[7],
+                    "room":        r[8],
+                }
+                for r in rows
+            ],
+            many=True
+        ).data
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class SemesterDeactivateView(APIView):
+    """
+    POST /api/semesters/<sid>/deactivate   (admin only)
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, sid):
+        ser = SemesterDeactivateSerializer(data={"sid": str(sid)})  # cast here
+        ser.is_valid(raise_exception=True)
+        ser.save()
+
+        # fetch the fresh end_date to return
+        with connection.cursor() as cur:
+            cur.execute(
+                "SELECT end_date FROM semesters WHERE sid=%s",
+                (sid,)
+            )
+            row = cur.fetchone()
+
+        return Response(
+            {"deactivated": True, "sid": sid, "end_date": row[0]},
+            status=status.HTTP_200_OK,
+        )

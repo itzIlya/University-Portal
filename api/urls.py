@@ -31,7 +31,7 @@ urlpatterns = [
             SectionStudentListView.as_view(),
             name="section-student-list",
         ),
-        
+
     path("rooms", RoomView.as_view(), name="room-create"),
 
     
@@ -40,5 +40,21 @@ urlpatterns = [
     
     path("admin/<str:resource>/<uuid:pk>",
      GenericAdminDeleteView.as_view(),
-     name="admin-generic-delete"),
+     name="admin-generic-delete"
+     ),
+
+    path("my-presented-courses",
+     MyPresentedCourseListView.as_view(),
+     name="my-presented-courses"
+     ),
+    path("grades", GradeUpdateView.as_view(), name="grade-update"),
+
+    path("my-courses", RecordCourseListView.as_view(), name="record-course-list"),
+
+    path(
+        "semesters/<uuid:sid>/deactivate",
+        SemesterDeactivateView.as_view(),
+        name="semester-deactivate",
+    ),
+
 ]

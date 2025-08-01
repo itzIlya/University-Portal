@@ -483,7 +483,65 @@ class MemberItemSerializer(serializers.Serializer):
 
 class SectionStudentItemSerializer(serializers.Serializer):
     student_number = serializers.CharField()
+    record_id      = serializers.CharField()
     fname          = serializers.CharField()
     lname          = serializers.CharField()
     status         = serializers.CharField()
     grade          = serializers.DecimalField(max_digits=3, decimal_places=1, allow_null=True)
+
+class MySectionItemSerializer(serializers.Serializer):
+    pcid         = serializers.CharField()
+    course_code  = serializers.CharField()
+    course_name  = serializers.CharField()
+    sem_title    = serializers.CharField()
+    on_days      = serializers.CharField()
+    on_times     = serializers.CharField()
+    room         = serializers.CharField()
+    capacity     = serializers.IntegerField()
+    max_capacity = serializers.IntegerField()
+class GradeUpdateSerializer(serializers.Serializer):
+    record_id = serializers.CharField(max_length=36)
+    pcid      = serializers.CharField(max_length=36)
+    grade     = serializers.DecimalField(max_digits=3, decimal_places=1,
+                                         min_value=0, max_value=20)
+
+    def save(self, professor_id):
+        vals = self.validated_data
+        try:
+            call_procedure(
+                "set_student_grade_tx",
+                (
+                    professor_id,
+                    vals["record_id"],
+                    vals["pcid"],
+                    vals["grade"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+        return vals
+
+class RecordCourseItemSerializer(serializers.Serializer):
+    pcid         = serializers.CharField()
+    course_code  = serializers.CharField()
+    course_name  = serializers.CharField()
+    status       = serializers.CharField()
+    grade        = serializers.DecimalField(max_digits=3, decimal_places=1,
+                                            allow_null=True)
+    professor    = serializers.CharField()
+    on_days      = serializers.CharField()
+    on_times     = serializers.CharField()
+    room         = serializers.CharField()
+
+
+class SemesterDeactivateSerializer(serializers.Serializer):
+    sid = serializers.CharField(max_length=36)
+
+    def save(self):
+        sid = self.validated_data["sid"]
+        try:
+            call_procedure("deactivate_semester", (sid,))
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return sid
