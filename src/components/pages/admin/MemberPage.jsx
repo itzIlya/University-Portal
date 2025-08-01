@@ -125,7 +125,7 @@ export default function MemberPage() {
                 <TableCell>Name</TableCell>
                 <TableCell>National&nbsp;ID</TableCell>
                 <TableCell>Username</TableCell>
-                <TableCell>Last&nbsp;Login</TableCell>
+                {/* <TableCell>Last&nbsp;Login</TableCell> */}
                 <TableCell>Roles</TableCell>
                 <TableCell width={80}></TableCell>
               </TableRow>
@@ -136,7 +136,7 @@ export default function MemberPage() {
                   <TableCell>{m.fname} {m.lname}</TableCell>
                   <TableCell>{m.national_id}</TableCell>
                   <TableCell>{m.username ?? "—"}</TableCell>
-                  <TableCell>{m.last_login ?? "—"}</TableCell>
+                  {/* <TableCell>{m.last_login ?? "—"}</TableCell> */}
                   <TableCell>
                     {(roleMap[m.mid] || []).map((r, i) => (
                       <Chip

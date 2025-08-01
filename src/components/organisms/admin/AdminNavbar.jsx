@@ -3,10 +3,10 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 const navLinks = [
   { label: "Dashboard",   to: "/admin" },
-  { label: "Semesters",   to: "/admin/semesters" },
-  { label: "Departments", to: "/admin/departments" },
-  { label: "Majors",      to: "/admin/majors" },
-  { label: "Members",     to: "/admin/members" },   // ← NEW
+  // { label: "Semesters",   to: "/admin/semesters" },
+  // { label: "Departments", to: "/admin/departments" },
+  // { label: "Majors",      to: "/admin/majors" },
+  // { label: "Members",     to: "/admin/members" },   // ← NEW
 ];
 
 export default function AdminNavbar() {
