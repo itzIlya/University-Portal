@@ -204,8 +204,8 @@ class DepartmentListSerializer(serializers.ListSerializer):
             {
                 "did":        row[0],
                 "department_name": row[1],
-                "department_head": row[2],
-                "location": row[3],
+                "department_head": row[3],
+                "location": row[2],
             }
             for row in data
         ]

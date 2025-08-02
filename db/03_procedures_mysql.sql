@@ -389,7 +389,7 @@ DROP PROCEDURE IF EXISTS assign_staff_role//
 CREATE PROCEDURE assign_staff_role (
     IN  p_national_id    CHAR(20),
     IN  p_department_name VARCHAR(150),
-    IN  p_staff_role      ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF'),
+    IN  p_staff_role       ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF','HEAD'),
     IN  p_start_date      DATE,
     IN  p_end_date        DATE
 )
@@ -1072,7 +1072,7 @@ BEGIN
     END IF;
 END//
 
-
+DROP TRIGGER IF EXISTS trg_one_head_per_dept//
 CREATE TRIGGER trg_one_head_per_dept
 BEFORE INSERT ON workers
 FOR EACH ROW
