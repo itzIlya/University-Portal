@@ -611,3 +611,13 @@ class StaffRoleUpdateSerializer(serializers.Serializer):
             "start_date":    v["start_date"],
             "end_date":      v["end_date"],
         }
+    
+class MyProfileSerializer(serializers.Serializer):
+    mid          = serializers.CharField()
+    fname        = serializers.CharField()
+    lname        = serializers.CharField()
+    national_id  = serializers.CharField()
+    birthday     = serializers.DateField()
+    is_admin     = serializers.BooleanField()
+    username     = serializers.CharField(allow_null=True)
+    last_login   = serializers.DateTimeField(allow_null=True)

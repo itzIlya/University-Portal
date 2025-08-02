@@ -57,4 +57,5 @@ urlpatterns = [
     ),
     path("taken-courses/status", StatusUpdateView.as_view(), name="course-status-update"),
     path("staff-roles", StaffRoleView.as_view(), name="staff-roles"),
+    path("me", MyProfileView.as_view(), name="my-profile"),
 ]

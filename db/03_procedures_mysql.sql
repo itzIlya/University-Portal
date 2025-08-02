@@ -1117,7 +1117,22 @@ BEGIN
 END//
 
 
-
+DROP PROCEDURE IF EXISTS get_member_profile//
+CREATE PROCEDURE get_member_profile (IN p_mid CHAR(36))
+BEGIN
+    SELECT
+        m.mid,
+        m.fname,
+        m.lname,
+        m.national_id,
+        m.birthday,
+        m.is_admin,
+        c.username,
+        c.last_login
+    FROM members     m
+    LEFT JOIN credentials c ON c.member_id = m.mid
+    WHERE m.mid = p_mid;
+END//
 
 /* #################################---------------------------------################################# */
 /* #################################| ***************************** |################################# */

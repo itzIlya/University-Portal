@@ -79,6 +79,30 @@ class SignInView(APIView):
         )
         return resp
 
+class MyProfileView(APIView):
+    """
+    GET /api/me    – return personal & credential info for logged-in user
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        rows = call_procedure("get_member_profile", (request.user.id,))
+        if not rows:
+            return Response({"detail": "Profile not found"},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        data = MyProfileSerializer({
+            "mid":         rows[0][0],
+            "fname":       rows[0][1],
+            "lname":       rows[0][2],
+            "national_id": rows[0][3],
+            "birthday":    rows[0][4],
+            "is_admin":    bool(rows[0][5]),
+            "username":    rows[0][6],
+            "last_login":  rows[0][7],
+        }).data
+
+        return Response(data, status=status.HTTP_200_OK)
 
 class SignOutView(APIView):
     """
