@@ -73,7 +73,7 @@ CREATE TABLE semesters (
 CREATE TABLE std_records (
     record_id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     mid       CHAR(36) NOT NULL,   -- FK → member
-    gpa       DECIMAL(4,3),
+    gpa       DECIMAL(4,2),
     major_id  CHAR(36) NOT NULL,   -- FK → majors
     entrance_sem CHAR(36) NOT NULL,
     student_number CHAR(10) NOT NULL UNIQUE,
@@ -147,7 +147,7 @@ CREATE TABLE presented_courses (
 CREATE TABLE student_semesters (
     record_id   CHAR(36) NOT NULL,
     semester_id CHAR(36) NOT NULL,
-    sem_gpa     DECIMAL(4,3),
+    sem_gpa     DECIMAL(4,2),
     sem_status  ENUM('ACTIVE','ON_LEAVE') NOT NULL,
     PRIMARY KEY (record_id, semester_id),
     FOREIGN KEY (record_id)   REFERENCES std_records(record_id)
@@ -161,12 +161,14 @@ CREATE TABLE taken_courses (
     semester_id CHAR(36) NOT NULL,
     pcid        CHAR(36) NOT NULL,        -- FK → presented_courses
     status ENUM('RESERVED','TAKING','COMPLETED') NOT NULL DEFAULT 'RESERVED',
-    grade       DECIMAL(3,1),
+    grade       DECIMAL(4,2),
     PRIMARY KEY (record_id, semester_id, pcid),
     FOREIGN KEY (record_id, semester_id)
         REFERENCES student_semesters(record_id, semester_id)
         ON DELETE CASCADE,
     FOREIGN KEY (pcid) REFERENCES presented_courses(pcid)
+    CONSTRAINT chk_grade_range
+        CHECK (grade BETWEEN 0 AND 20);
 ) ENGINE = InnoDB;
 
 -- ── optional audit table ─────────────────────────────────────
@@ -175,7 +177,7 @@ CREATE TABLE grade_audit (
     record_id   CHAR(36) NOT NULL,
     semester_id CHAR(36) NOT NULL,
     pcid        CHAR(36) NOT NULL,
-    old_grade   DECIMAL(3,1),
-    new_grade   DECIMAL(3,1),
+    old_grade   DECIMAL(4,2),
+    new_grade   DECIMAL(4,2 ),
     changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE = InnoDB;

@@ -1134,6 +1134,37 @@ BEGIN
     WHERE m.mid = p_mid;
 END//
 
+
+DROP PROCEDURE IF EXISTS list_student_semesters//
+CREATE PROCEDURE list_student_semesters (IN p_record_id CHAR(36))
+BEGIN
+    /*------------------------------------------------------------
+      1. Recalculate GPA for *each* semester of this student record
+         ▸ AVG ignores NULL grades
+         ▸ Only rows with at least one non-NULL grade are updated
+    ------------------------------------------------------------*/
+    UPDATE student_semesters AS ss
+    SET ss.sem_gpa = (
+        SELECT AVG(tc.grade)                       -- NULL-safe average
+          FROM taken_courses tc
+         WHERE tc.record_id   = ss.record_id
+           AND tc.semester_id = ss.semester_id
+           AND tc.grade IS NOT NULL
+    )
+    WHERE ss.record_id = p_record_id;
+
+    /*------------------------------------------------------------
+      2. Return all semesters for that record, newest first
+    ------------------------------------------------------------*/
+    SELECT
+        ss.semester_id,
+        ss.sem_status,
+        ss.sem_gpa
+    FROM student_semesters ss
+    WHERE ss.record_id = p_record_id
+    ORDER BY ss.semester_id DESC;
+END//
+
 /* #################################---------------------------------################################# */
 /* #################################| ***************************** |################################# */
 /* #################################| *          TRIGGERS         * |################################# */

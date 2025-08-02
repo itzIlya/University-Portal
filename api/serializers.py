@@ -621,3 +621,9 @@ class MyProfileSerializer(serializers.Serializer):
     is_admin     = serializers.BooleanField()
     username     = serializers.CharField(allow_null=True)
     last_login   = serializers.DateTimeField(allow_null=True)
+
+
+class StudentSemesterItemSerializer(serializers.Serializer):
+    semester_id = serializers.CharField()
+    sem_status  = serializers.CharField()
+    sem_gpa     = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)

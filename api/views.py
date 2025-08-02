@@ -339,38 +339,59 @@ class RoomView(APIView):
         result = ser.save()              # {"pcid": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
     
+
 class StudentSemesterCreateView(APIView):
     """
-    POST /api/student-semesters
-    { "record_id": "c0f2…uuid…" }
-
-    • Auth required (session)
-    • Checks that the given student_record belongs to the logged‑in member
-    • Calls stored proc to create exactly one ACTIVE row for the current semester
+    POST /api/student-semesters         – create current ACTIVE semester
+    GET  /api/student-semesters?record_id=<uuid>
+                                        – list all semesters for that record
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
-        record_id = request.data.get("record_id")
-
-        # ---------- ownership check ---------------------------------
+    # ---------- helper: ownership check ----------------------------
+    def _owns_record(self, record_id, user_id):
         with connection.cursor() as cur:
             cur.execute(
                 "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
-                (record_id, request.user.id),
+                (record_id, user_id),
             )
-            if cur.fetchone() is None:
-                return Response(
-                    {"detail": "You do not own this student record"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+            return cur.fetchone() is not None
 
-        # ---------- proceed to stored procedure ---------------------
+    # ---------- GET – list semesters -------------------------------
+    def get(self, request):
+        record_id = request.query_params.get("record_id")
+        if not record_id:
+            return Response(
+                {"detail": "record_id query parameter required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.is_staff and not self._owns_record(record_id, request.user.id):
+            raise PermissionDenied("You do not own this student record")
+
+        # either call the stored procedure…
+        rows = call_procedure("list_student_semesters", (record_id,))
+
+        data = StudentSemesterItemSerializer(
+            [
+                {"semester_id": r[0], "sem_status": r[1], "sem_gpa": r[2]}
+                for r in rows
+            ],
+            many=True,
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+
+    # ---------- POST – create row (unchanged) ----------------------
+    def post(self, request):
+        record_id = request.data.get("record_id")
+
+        if not request.user.is_staff and not self._owns_record(record_id, request.user.id):
+            raise PermissionDenied("You do not own this student record")
+
         ser = StudentSemesterCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        result = ser.save()           # {"record_id": "...", "semester_id": "..."}
+        result = ser.save()          # {"record_id": "...", "semester_id": "..."}
         return Response(result, status=status.HTTP_201_CREATED)
-
 
 class StaffView(APIView):
     """
