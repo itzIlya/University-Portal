@@ -1054,6 +1054,68 @@ BEGIN
     ORDER BY room_label;
 END//
 
+DROP PROCEDURE IF EXISTS update_staff_role//
+CREATE PROCEDURE update_staff_role (
+    IN p_national_id     CHAR(20),
+    IN p_department_name VARCHAR(150),
+    IN p_start_date      DATE,                         -- locate row
+    IN p_staff_role      ENUM('INSTRUCTOR','CLERK','CHAIR','ADMIN','PROF','HEAD'),
+    IN p_end_date        DATE
+)
+BEGIN
+    DECLARE v_mid CHAR(36);
+    DECLARE v_did CHAR(36);
+
+    /* 1. resolve member & department -------------------------------- */
+    SELECT mid INTO v_mid
+      FROM members WHERE national_id = p_national_id LIMIT 1;
+    IF v_mid IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No such member';
+    END IF;
+
+    SELECT did INTO v_did
+      FROM departments WHERE department_name = p_department_name LIMIT 1;
+    IF v_did IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'No such department';
+    END IF;
+
+    /* 2. check row exists ------------------------------------------ */
+    IF NOT EXISTS (
+        SELECT 1 FROM workers
+         WHERE member_id = v_mid
+           AND did       = v_did
+           AND start_date = p_start_date
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'No matching staff-role row';
+    END IF;
+
+    /* 3. HEAD uniqueness guard ------------------------------------- */
+    IF p_staff_role = 'HEAD' THEN
+        IF EXISTS (
+               SELECT 1 FROM workers
+                WHERE did = v_did
+                  AND staff_role = 'HEAD'
+                  AND end_date IS NULL
+                  AND NOT (member_id = v_mid  AND start_date = p_start_date)
+           ) THEN
+            SIGNAL SQLSTATE '45000'
+              SET MESSAGE_TEXT = 'Department already has an active head';
+        END IF;
+    END IF;
+
+    /* 4. perform the update ---------------------------------------- */
+    UPDATE workers
+       SET staff_role = p_staff_role,
+           end_date   = p_end_date
+     WHERE member_id  = v_mid
+       AND did        = v_did
+       AND start_date = p_start_date;
+
+    /* return the PK for confirmation */
+    SELECT v_mid AS staff_id, v_did AS department_id;
+END//
+
 
 
 
@@ -1077,16 +1139,24 @@ CREATE TRIGGER trg_one_head_per_dept
 BEFORE INSERT ON workers
 FOR EACH ROW
 BEGIN
-    IF NEW.staff_role = 'HEAD'
-       AND NEW.end_date IS NULL
-       AND EXISTS (SELECT 1
-                     FROM workers
-                    WHERE did = NEW.did
-                      AND staff_role = 'HEAD'
-                      AND end_date IS NULL)
-    THEN
-        SIGNAL SQLSTATE '45000'
-          SET MESSAGE_TEXT = 'That department already has a head';
+    /* fire only for HEAD rows */
+    IF NEW.staff_role = 'HEAD' THEN
+
+        /* does an active (or future-dated) head already exist? */
+        IF EXISTS (
+               SELECT 1
+                 FROM workers
+                WHERE did        = NEW.did
+                  AND staff_role = 'HEAD'
+                  AND (
+                        end_date IS NULL        -- still open-ended
+                        OR end_date >= CURDATE()-- ends today / future
+                      )
+             ) THEN
+            SIGNAL SQLSTATE '45000'
+              SET MESSAGE_TEXT = 'That department already has an active head';
+        END IF;
+
     END IF;
 END//
 

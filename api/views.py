@@ -196,24 +196,26 @@ class SemesterListView(APIView):
         data = serializer.to_representation(rows)
         return Response(data, status=status.HTTP_200_OK)
     
-class StaffRoleCreateView(APIView):
+class StaffRoleView(APIView):
     """
-    POST /api/staff-roles
-    {
-      "national_id":     "X123456789",
-      "department_name": "Computer Science",
-      "staff_role":      "PROF",
-      "start_date":      "2025-08-01",
-      "end_date":        null
-    }
+    POST /api/staff-roles   → create   (admin)
+    PUT  /api/staff-roles   → update   (admin)
     """
-    permission_classes = [permissions.IsAdminUser]   # admin‑only
+    permission_classes = [permissions.IsAdminUser]
 
+    # ---------- POST ----------
     def post(self, request):
         ser = StaffRoleCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         result = ser.save()
         return Response(result, status=status.HTTP_201_CREATED)
+
+    # ---------- PUT ----------
+    def put(self, request):
+        ser = StaffRoleUpdateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save()
+        return Response(result, status=status.HTTP_200_OK)
     
 # class StaffPromoteView(APIView):
 #     """

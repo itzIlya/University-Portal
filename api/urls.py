@@ -18,7 +18,6 @@ urlpatterns = [
 
     path("student-records", StudentRecordCreateView.as_view(), name="student-record-create"),
     #path("staff", StaffPromoteView.as_view(), name="staff-promote"),
-    path("staff-roles", StaffRoleCreateView.as_view(), name="staff-role-create"),
 
     path("courses", CourseView.as_view(), name="courses"),
     path("presented-courses/create", PresentedCourseCreateView.as_view(), name="presented-course-create"),
@@ -57,6 +56,5 @@ urlpatterns = [
         name="semester-deactivate",
     ),
     path("taken-courses/status", StatusUpdateView.as_view(), name="course-status-update"),
-   
-
+    path("staff-roles", StaffRoleView.as_view(), name="staff-roles"),
 ]

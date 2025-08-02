@@ -572,3 +572,42 @@ class RoomItemSerializer(serializers.Serializer):
     rid         = serializers.CharField()
     room_label  = serializers.CharField()
     capacity    = serializers.IntegerField()
+
+
+ROLE_CHOICES = ["INSTRUCTOR","CLERK","CHAIR","ADMIN","PROF","HEAD"]
+
+class StaffRoleUpdateSerializer(serializers.Serializer):
+    national_id     = serializers.CharField(max_length=20)
+    department_name = serializers.CharField(max_length=150)
+    start_date      = serializers.DateField()  # identifies the row
+    staff_role      = serializers.ChoiceField(choices=ROLE_CHOICES)
+    end_date        = serializers.DateField(allow_null=True)
+
+    def validate(self, data):
+        if data["end_date"] and data["end_date"] <= data["start_date"]:
+            raise serializers.ValidationError("end_date must be after start_date")
+        return data
+
+    def save(self):
+        v = self.validated_data
+        try:
+            rows = call_procedure(
+                "update_staff_role",
+                (
+                    v["national_id"],
+                    v["department_name"],
+                    v["start_date"],
+                    v["staff_role"],
+                    v["end_date"],
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+
+        return {
+            "staff_id":      rows[0][0],
+            "department_id": rows[0][1],
+            "staff_role":    v["staff_role"],
+            "start_date":    v["start_date"],
+            "end_date":      v["end_date"],
+        }
