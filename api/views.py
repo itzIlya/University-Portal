@@ -750,3 +750,42 @@ class StatusUpdateView(APIView):
 
 
 
+class StudentRecordListView(APIView):
+    """
+    GET /api/student-records
+        – lists records of logged-in user
+
+    GET /api/student-records?member_mid=<uuid>
+        – admin only: list records of specified member
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        member_mid = request.query_params.get("member_mid")
+
+        if member_mid:
+            if not request.user.is_staff:
+                raise PermissionDenied("Only admins may specify member_mid")
+        else:
+            member_mid = request.user.id     # your own
+
+        try:
+            rows = call_procedure("list_student_records", (member_mid,))
+        except DBError as e:
+            return Response({"detail": e.msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = StudentRecordItemSerializer(
+            [
+                {
+                    "record_id":    r[0],
+                    "entrance_sem": r[1],
+                    "gpa":          r[2],
+                    "major_id":     r[3],
+                    "major_name":   r[4],
+                }
+                for r in rows
+            ],
+            many=True
+        ).data
+
+        return Response(data, status=status.HTTP_200_OK)

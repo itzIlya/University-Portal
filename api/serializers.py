@@ -366,6 +366,15 @@ class StudentSemesterCreateSerializer(serializers.Serializer):
             "semester_id": rows[0][0],
         }   
 
+class StudentRecordItemSerializer(serializers.Serializer):
+    record_id     = serializers.CharField()
+    entrance_sem  = serializers.CharField()
+    gpa           = serializers.DecimalField(max_digits=5, decimal_places=2,
+                                             allow_null=True)
+    major_id      = serializers.CharField()
+    major_name    = serializers.CharField()
+
+
 
 VALID_ROLES = ["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF"]
 

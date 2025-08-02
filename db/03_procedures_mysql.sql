@@ -1165,6 +1165,23 @@ BEGIN
     ORDER BY ss.semester_id DESC;
 END//
 
+
+
+DROP PROCEDURE IF EXISTS list_student_records//
+CREATE PROCEDURE list_student_records (IN p_mid CHAR(36))
+BEGIN
+    SELECT
+        sr.record_id,
+        sr.entrance_sem,
+        sr.gpa,
+        m.major_id,
+        m.major_name
+    FROM std_records sr
+    JOIN majors       m ON m.major_id = sr.major_id
+    WHERE sr.mid = p_mid
+    ORDER BY sr.entrance_sem;
+END//
+
 /* #################################---------------------------------################################# */
 /* #################################| ***************************** |################################# */
 /* #################################| *          TRIGGERS         * |################################# */
