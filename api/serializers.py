@@ -407,8 +407,8 @@ class CourseItemSerializer(serializers.Serializer):
     course_name = serializers.CharField()
 
 class PresentedCourseListQuerySerializer(serializers.Serializer):
-    semester_id   = serializers.CharField(max_length=36)
-    department_id = serializers.CharField(max_length=36)
+    semester_id = serializers.CharField(max_length=36)
+    major_id    = serializers.CharField(max_length=36)
 
     def fetch(self):
         try:
@@ -416,7 +416,7 @@ class PresentedCourseListQuerySerializer(serializers.Serializer):
                 "list_presented_courses",
                 (
                     self.validated_data["semester_id"],
-                    self.validated_data["department_id"],
+                    self.validated_data["major_id"],
                 ),
             )
         except DBError as e:

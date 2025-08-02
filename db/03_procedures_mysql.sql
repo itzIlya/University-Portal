@@ -638,37 +638,45 @@ BEGIN
     ORDER  BY course_name ASC;
 END//
 
-
-
 DROP PROCEDURE IF EXISTS list_presented_courses//
 CREATE PROCEDURE list_presented_courses (
-    IN p_semester_id   CHAR(36),
-    IN p_department_id CHAR(36)
+    IN p_semester_id CHAR(36),
+    IN p_major_id    CHAR(36)
 )
 BEGIN
-    /*
-      Returns every presented_courses row
-      • in the requested semester
-      • whose professor has a worker‑record in the requested department
-      Columns returned are suitable for the front‑end schedule list.
-    */
-    SELECT  DISTINCT
-            pc.pcid,
-            c.course_code,
-            c.course_name,
-            CONCAT(m.fname, ' ', m.lname) AS professor,
-            pc.on_days,
-            pc.on_times,
-            COALESCE(r.room_label, 'TBA') AS room,
-            pc.capacity,
-            pc.max_capacity
-    FROM    presented_courses pc
-    JOIN    courses      c  ON c.cid  = pc.course_id
-    JOIN    members      m  ON m.mid  = pc.prof_id        -- professor name
-    JOIN    workers      w  ON w.member_id = pc.prof_id
-    LEFT    JOIN rooms   r  ON r.rid  = pc.room_id
-    WHERE   pc.semester_id = p_semester_id
-      AND   w.did = p_department_id;
+    DECLARE v_did CHAR(36);
+
+    /* 1. resolve major → department -------------------------------- */
+    SELECT did
+      INTO v_did
+      FROM majors
+     WHERE major_id = p_major_id
+     LIMIT 1;
+
+    IF v_did IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'major_id not found';
+    END IF;
+
+    /* 2. fetch sections taught by staff working in that department */
+    SELECT DISTINCT
+           pc.pcid,
+           c.course_code,
+           c.course_name,
+           CONCAT(m.fname,' ',m.lname) AS professor,
+           pc.on_days,
+           pc.on_times,
+           COALESCE(r.room_label,'TBA') AS room,
+           pc.capacity,
+           pc.max_capacity
+    FROM   presented_courses pc
+    JOIN   courses      c  ON c.cid  = pc.course_id
+    JOIN   members      m  ON m.mid  = pc.prof_id
+    JOIN   workers      w  ON w.member_id = pc.prof_id
+    LEFT   JOIN rooms   r  ON r.rid  = pc.room_id
+    WHERE  pc.semester_id = p_semester_id
+      AND  w.did         = v_did
+    ORDER  BY c.course_code;
 END//
 
 

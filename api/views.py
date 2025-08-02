@@ -423,10 +423,11 @@ class StaffView(APIView):
 
 class PresentedCourseListView(APIView):
     """
-    GET /api/presented-courses?semester_id=<sid>&department_id=<did>
- 
+    GET /api/presented-courses?semester_id=<sid>&major_id=<mid>
+
     • Any authenticated user can call.
-    • JSON array of sections that match both filters.
+    • Returns every section in that semester taught by staff working in the
+      department that owns the given major.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -435,7 +436,6 @@ class PresentedCourseListView(APIView):
         ser.is_valid(raise_exception=True)
         data = ser.fetch()
         return Response(data, status=status.HTTP_200_OK)
-    
 
 class TakenCourseView(APIView):
     """
