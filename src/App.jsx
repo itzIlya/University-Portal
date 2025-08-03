@@ -15,6 +15,7 @@ import RoomPage from "./components/pages/admin/RoomPage";
 import StudentDashboard from "./components/pages/student/StudentDashboard";
 import StudentSemestersPage from "./components/pages/student/StudentSemestersPage";
 import StudentCoursesPage from "./components/pages/student/StudentCoursesPage";
+import StudentTranscriptsPage  from "./components/pages/student/StudentTranscriptsPage";
 
 //import TestRecords from "./components/pages/student/TestRecords";
 
@@ -46,6 +47,11 @@ function App() {
        <Route path="/student"            element={<StudentDashboard />} />
       <Route path="/student/semesters"  element={<StudentSemestersPage />} />
       <Route path="/student/semesters/:sid" element={<StudentCoursesPage />} />
+      <Route path="/student/transcripts" element={<StudentTranscriptsPage />} />
+
+{/* optional: per‐semester transcript directly */}
+<Route path="/student/semesters/:sid/transcript"
+       element={<StudentTranscriptsPage />} />
     </Routes>
   );
 }

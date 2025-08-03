@@ -4,7 +4,7 @@ import { Link as RouterLink, useLocation } from "react-router-dom";
 
 const navLinks = [
   { label: "Dashboard", to: "/student" },
-  { label: "Semesters", to: "/student/semesters" },
+  
 
 ];
 
