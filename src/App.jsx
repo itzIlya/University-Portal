@@ -13,6 +13,8 @@ import PresentedCoursePage from "./components/pages/admin/PresentedCoursePage";
 import RoomPage from "./components/pages/admin/RoomPage";
 
 import StudentDashboard from "./components/pages/student/StudentDashboard";
+import StudentSemestersPage from "./components/pages/student/StudentSemestersPage";
+import StudentCoursesPage from "./components/pages/student/StudentCoursesPage";
 
 //import TestRecords from "./components/pages/student/TestRecords";
 
@@ -31,23 +33,19 @@ function App() {
         }
       >
         <Route index element={<Navigate to="semesters" replace />} />
-        <Route path="semesters"   element={<SemesterPage />} />
+        <Route path="semesters" element={<SemesterPage />} />
         <Route path="departments" element={<DepartmentPage />} />
-        <Route path="majors"      element={<MajorPage />} />
-        <Route path="members"     element={<MemberPage />} />
-        <Route path="courses"     element={<CourseCreatePage />} />
-        <Route path="rooms"       element={<RoomPage />} />
-        <Route path="presented"   element={<PresentedCoursePage />} />
+        <Route path="majors" element={<MajorPage />} />
+        <Route path="members" element={<MemberPage />} />
+        <Route path="courses" element={<CourseCreatePage />} />
+        <Route path="rooms" element={<RoomPage />} />
+        <Route path="presented" element={<PresentedCoursePage />} />
       </Route>
 
-      {/* redirect /student to /student/semesters */}
-      {/* <Route path="/student" element={<Navigate to="/student/semesters" replace />} /> */}
-
-      <Route path="/student" element={<StudentDashboard />}>
-        {/* <Route index element={<Navigate to="semesters" replace />} /> */}
-
-        {/* <Route path="records" element={<TestRecords />} /> */}
-      </Route>
+       {/* student: three independent pages */}
+       <Route path="/student"            element={<StudentDashboard />} />
+      <Route path="/student/semesters"  element={<StudentSemestersPage />} />
+      <Route path="/student/semesters/:sid" element={<StudentCoursesPage />} />
     </Routes>
   );
 }
