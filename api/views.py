@@ -472,7 +472,56 @@ class TakenCourseView(APIView):
         ser.delete(ser.validated_data)
         return Response({"removed": True}, status=status.HTTP_200_OK)
     
+class TakenCourseListView(APIView):
+    """
+    GET /api/taken-courses[?semester_id=<sid>][&member_mid=<mid>]
 
+    • Students → their own history.
+    • Admin    → may specify member_mid to view another student.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = TakenCourseQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        semester_id = q.validated_data.get("semester_id", "")
+        member_mid  = q.validated_data.get("member_mid")
+
+        if member_mid:
+            if not request.user.is_staff:
+                raise PermissionDenied("Only admins may specify member_mid")
+        else:
+            member_mid = request.user.id
+
+        try:
+            rows = call_procedure("list_taken_courses",
+                                  (member_mid, semester_id or ""))
+        except DBError as e:
+            return Response({"detail": e.msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data = TakenCourseItemSerializer(
+            [
+                {
+                    "record_id":    r[0],
+                    "semester_id":  r[1],
+                    "pcid":         r[2],
+                    "course_code":  r[3],
+                    "course_name":  r[4],
+                    "status":       r[5],
+                    "grade":        r[6],
+                    "professor":    r[7],
+                    "on_days":      r[8],
+                    "on_times":     r[9],
+                    "room":         r[10],
+                }
+                for r in rows
+            ],
+            many=True,
+        ).data
+
+        return Response(data, status=status.HTTP_200_OK)
+        
 class MemberListView(APIView):
     """
     GET /api/members   (admin only)

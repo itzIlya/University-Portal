@@ -321,21 +321,23 @@ END//
 DROP PROCEDURE IF EXISTS list_departments//
 CREATE PROCEDURE list_departments ()
 BEGIN
-    /* Every department + its current head, if any */
+    /* ------------------------------------------------------------------
+       Every department + its active head (if any)
+       “Active” = end_date IS NULL  OR  end_date >= today
+    ------------------------------------------------------------------ */
     SELECT
         d.did,
         d.department_name,
         d.location,
-        w.member_id            AS head_mid,
-        CONCAT(m.fname,' ',m.lname) AS head_name
-    FROM departments            AS d
-    /* one current HEAD per department (if defined) */
-    LEFT JOIN workers           AS w
+        w.member_id                     AS head_mid,
+        CONCAT(m.fname,' ',m.lname)     AS head_name
+    FROM departments AS d
+    /* join ONLY the still-active HEAD row */
+    LEFT JOIN workers AS w
            ON w.did = d.did
           AND w.staff_role = 'HEAD'
-          AND w.end_date  IS NULL
-    /* (optional) human-readable name of the head */
-    LEFT JOIN members           AS m
+          AND (w.end_date IS NULL OR w.end_date >= CURDATE())
+    LEFT JOIN members AS m
            ON m.mid = w.member_id
     ORDER BY d.department_name;
 END//
@@ -1188,6 +1190,36 @@ BEGIN
     JOIN majors       m ON m.major_id = sr.major_id
     WHERE sr.mid = p_mid
     ORDER BY sr.entrance_sem;
+END//
+
+DROP PROCEDURE IF EXISTS list_taken_courses//
+CREATE PROCEDURE list_taken_courses (
+    IN p_mid         CHAR(36),      -- whose member
+    IN p_semester_id CHAR(36)       -- optional filter, '' = all
+)
+BEGIN
+    /* 1. iterate over that member's records */
+    SELECT
+        tc.record_id,
+        tc.semester_id,
+        pc.pcid,
+        c.course_code,
+        c.course_name,
+        tc.status,
+        tc.grade,
+        CONCAT(mp.fname,' ',mp.lname) AS professor,
+        pc.on_days,
+        pc.on_times,
+        COALESCE(r.room_label,'TBA')   AS room
+    FROM   std_records        sr
+    JOIN   taken_courses      tc ON tc.record_id   = sr.record_id
+    JOIN   presented_courses  pc ON pc.pcid        = tc.pcid
+    JOIN   courses            c  ON c.cid          = pc.course_id
+    JOIN   members            mp ON mp.mid         = pc.prof_id
+    LEFT   JOIN rooms         r  ON r.rid          = pc.room_id
+    WHERE  sr.mid = p_mid
+      AND (p_semester_id = '' OR tc.semester_id = p_semester_id)
+    ORDER  BY tc.semester_id, c.course_code;
 END//
 
 /* #################################---------------------------------################################# */

@@ -61,4 +61,8 @@ urlpatterns = [
 
     path("my-student-records", StudentRecordListView.as_view(),
          name="student-record-list"),
+
+      path("my-taken-courses", TakenCourseListView.as_view(),
+         name="taken-course-list"),
+
 ]

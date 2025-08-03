@@ -206,6 +206,7 @@ class DepartmentListSerializer(serializers.ListSerializer):
                 "department_name": row[1],
                 "department_head": row[3],
                 "location": row[2],
+                "department_head_name": row[4],
             }
             for row in data
         ]
@@ -636,3 +637,22 @@ class StudentSemesterItemSerializer(serializers.Serializer):
     semester_id = serializers.CharField()
     sem_status  = serializers.CharField()
     sem_gpa     = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
+
+
+class TakenCourseQuerySerializer(serializers.Serializer):
+    semester_id = serializers.CharField(max_length=36, required=False)
+    member_mid  = serializers.CharField(max_length=36, required=False)
+
+class TakenCourseItemSerializer(serializers.Serializer):
+    record_id    = serializers.CharField()
+    semester_id  = serializers.CharField()
+    pcid         = serializers.CharField()
+    course_code  = serializers.CharField()
+    course_name  = serializers.CharField()
+    status       = serializers.CharField()
+    grade        = serializers.DecimalField(max_digits=4, decimal_places=2,
+                                            allow_null=True)
+    professor    = serializers.CharField()
+    on_days      = serializers.CharField()
+    on_times     = serializers.CharField()
+    room         = serializers.CharField()
