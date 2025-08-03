@@ -87,7 +87,7 @@ export default function DepartmentPage() {
       const m = members.find((x) => x.national_id === headData.national_id);
       const label = m ? `${m.fname} ${m.lname}` : "—";
       items.forEach((d) => {
-        if (d.did === selectedDept.did) d.department_head = label;
+        if (d.did === selectedDept.did) d.department_head_name = label;
       });
       setDialogOpen(false);
     } catch (err) {
@@ -186,14 +186,14 @@ export default function DepartmentPage() {
                 <TableRow key={d.did}>
                   <TableCell>{d.department_name}</TableCell>
                   <TableCell>{d.location}</TableCell>
-                  <TableCell>{d.department_head || "—"}</TableCell>
+                  <TableCell>{d.department_head_name || "—"}</TableCell>
                   <TableCell align="right">
                     <Button
                       size="small"
                       onClick={() => openDialog(d)}
-                      disabled={Boolean(d.department_head)}
+                      disabled={Boolean(d.department_head_name)}
                     >
-                      {d.department_head ? "Head Assigned" : "Assign Head"}
+                      {d.department_head_name ? "Head Assigned" : "Assign Head"}
                     </Button>
                   </TableCell>
                 </TableRow>

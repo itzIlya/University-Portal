@@ -53,7 +53,7 @@ export default function SignInForm() {
       if (res.data.is_admin) {
         navigate("/admin", { replace: true });
       } else {
-        navigate("/courses", { replace: true });
+        navigate("/student", { replace: true });
       }
     }
     
