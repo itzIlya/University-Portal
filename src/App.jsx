@@ -15,14 +15,19 @@ import RoomPage from "./components/pages/admin/RoomPage";
 import StudentDashboard from "./components/pages/student/StudentDashboard";
 import StudentSemestersPage from "./components/pages/student/StudentSemestersPage";
 import StudentCoursesPage from "./components/pages/student/StudentCoursesPage";
-import StudentTranscriptsPage  from "./components/pages/student/StudentTranscriptsPage";
+import StudentTranscriptsPage from "./components/pages/student/StudentTranscriptsPage";
+import ProfessorDashboard from "./components/pages/Professor/ProfessorDashoard";
+import ProfessorSectionsPage from "./components/pages/Professor/ProfessorSectionsPage";
+import SectionStudentsPage from "./components/pages/Professor/SectionStudentsPage";
+import LandingPage from "./components/pages/LandingPage";
 
 //import TestRecords from "./components/pages/student/TestRecords";
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<RegistrationPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/register" element={<RegistrationPage />} />
       <Route path="/signin" element={<SignInPage />} />
 
       <Route
@@ -43,15 +48,25 @@ function App() {
         <Route path="presented" element={<PresentedCoursePage />} />
       </Route>
 
-       {/* student: three independent pages */}
-       <Route path="/student"            element={<StudentDashboard />} />
-      <Route path="/student/semesters"  element={<StudentSemestersPage />} />
+      {/* student: three independent pages */}
+      <Route path="/student" element={<StudentDashboard />} />
+      <Route path="/student/semesters" element={<StudentSemestersPage />} />
       <Route path="/student/semesters/:sid" element={<StudentCoursesPage />} />
       <Route path="/student/transcripts" element={<StudentTranscriptsPage />} />
 
-{/* optional: per‐semester transcript directly */}
-<Route path="/student/semesters/:sid/transcript"
-       element={<StudentTranscriptsPage />} />
+      {/* optional: per‐semester transcript directly */}
+      <Route
+        path="/student/semesters/:sid/transcript"
+        element={<StudentTranscriptsPage />}
+      />
+
+      {/* Professor: each page lives at its own path */}
+      <Route path="/professor" element={<ProfessorDashboard />} />
+      <Route path="/professor/sections" element={<ProfessorSectionsPage />} />
+      <Route
+        path="/professor/sections/:pcid/students"
+        element={<SectionStudentsPage />}
+      />
     </Routes>
   );
 }
