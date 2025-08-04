@@ -636,7 +636,7 @@ class MyProfileSerializer(serializers.Serializer):
 class StudentSemesterItemSerializer(serializers.Serializer):
     semester_id = serializers.CharField()
     sem_status  = serializers.CharField()
-    sem_gpa     = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
+    sem_gpa     = serializers.FloatField(max_digits=4, decimal_places=2, allow_null=True)
 
 
 class TakenCourseQuerySerializer(serializers.Serializer):
