@@ -650,8 +650,8 @@ class TakenCourseItemSerializer(serializers.Serializer):
     course_code  = serializers.CharField()
     course_name  = serializers.CharField()
     status       = serializers.CharField()
-    grade        = serializers.DecimalField(max_digits=4, decimal_places=2,
-                                            allow_null=True)
+    grade        = serializers.FloatField(allow_null=True)
+
     professor    = serializers.CharField()
     on_days      = serializers.CharField()
     on_times     = serializers.CharField()
