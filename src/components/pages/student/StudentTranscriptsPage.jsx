@@ -28,13 +28,14 @@ import StudentNavbar from "../../organisms/student/StudentNavbar";
 export default function StudentTranscriptsPage() {
   const navigate = useNavigate();
 
-  const [recordId, setRecordId]         = useState(null);
-  const [enrolled, setEnrolled]         = useState([]);   // [{ semester_id, sem_status, sem_gpa }, …]
-  const [semesters, setSemesters]       = useState([]);   // all semesters metadata
-  const [selectedSid, setSelectedSid]   = useState("");
-  const [courses, setCourses]           = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState(null);
+  const [recordId, setRecordId]       = useState(null);
+  const [enrolled, setEnrolled]       = useState([]);   // [{ semester_id, sem_status, sem_gpa }, …]
+  const [semesters, setSemesters]     = useState([]);   // all semesters metadata
+  const [selectedSid, setSelectedSid] = useState("");
+  const [courses, setCourses]         = useState([]);
+  const [overallGpa, setOverallGpa]   = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
 
   // 1) get record_id
   useEffect(() => {
@@ -43,8 +44,21 @@ export default function StudentTranscriptsPage() {
         if (!data.length) throw new Error("No student record");
         setRecordId(data[0].record_id);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => setError(e.message));
   }, []);
+
+  // 1b) once record_id → fetch overall GPA from student-records endpoint
+  useEffect(() => {
+    if (!recordId) return;
+    api.get("/student-records")
+      .then(({ data }) => {
+        const me = data.find(r => r.record_id === recordId);
+        setOverallGpa(me?.gpa ?? null);
+      })
+      .catch(() => {
+        // fail silently; overallGpa will stay null
+      });
+  }, [recordId]);
 
   // 2) once record_id → load enrolled semesters + all semester titles
   useEffect(() => {
@@ -57,7 +71,6 @@ export default function StudentTranscriptsPage() {
       .then(([eRes, sRes]) => {
         setEnrolled(eRes.data);
         setSemesters(sRes.data);
-        // pick either URL‐driven sid or first enrolled
         const first = eRes.data[0]?.semester_id;
         setSelectedSid(first || "");
       })
@@ -69,8 +82,7 @@ export default function StudentTranscriptsPage() {
   useEffect(() => {
     if (!selectedSid) return;
     setLoading(true);
-    api
-      .get("/my-taken-courses", { params: { semester_id: selectedSid } })
+    api.get("/my-taken-courses", { params: { semester_id: selectedSid } })
       .then(({ data }) => setCourses(data))
       .catch(() => setError("Failed to load transcript"))
       .finally(() => setLoading(false));
@@ -79,6 +91,10 @@ export default function StudentTranscriptsPage() {
   if (error) {
     return <Alert severity="error">{error}</Alert>;
   }
+
+  // find sem_gpa for selected
+  const selectedSem = enrolled.find(e => e.semester_id === selectedSid);
+  const semGpa      = selectedSem?.sem_gpa ?? null;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -118,6 +134,26 @@ export default function StudentTranscriptsPage() {
                 })}
               </Select>
             </FormControl>
+
+            {/* GPA summary boxes */}
+            <Stack direction="row" spacing={4} mb={4}>
+              <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Semester GPA
+                </Typography>
+                <Typography variant="h6">
+                  {semGpa != null ? semGpa.toFixed(2) : "—"}
+                </Typography>
+              </Paper>
+              <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
+                <Typography variant="subtitle2" color="textSecondary">
+                  Overall GPA
+                </Typography>
+                <Typography variant="h6">
+                  {overallGpa != null ? overallGpa.toFixed(2) : "—"}
+                </Typography>
+              </Paper>
+            </Stack>
 
             {/* courses & grades table */}
             <TableContainer component={Paper}>

@@ -16,7 +16,9 @@ import {
   Stack,
   Divider,
   Snackbar,
+  IconButton,
 } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../../api/axios";
 import StudentNavbar from "../../organisms/student/StudentNavbar";
@@ -25,17 +27,21 @@ export default function StudentCoursesPage() {
   const { sid } = useParams();
   const navigate = useNavigate();
 
-  const [recordId, setRecordId]     = useState(null);
-  const [majorId, setMajorId]       = useState(null);
-  const [semester, setSemester]     = useState(null);
-  const [offered, setOffered]       = useState([]);
-  const [taken, setTaken]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
+  const [recordId, setRecordId]             = useState(null);
+  const [majorId, setMajorId]               = useState(null);
+  const [semester, setSemester]             = useState(null);
+  const [offered, setOffered]               = useState([]);
+  const [taken, setTaken]                   = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState(null);
 
   // for enrollment errors
-  const [enrollError, setEnrollError]         = useState("");
+  const [enrollError, setEnrollError]       = useState("");
   const [enrollErrorOpen, setEnrollErrorOpen] = useState(false);
+
+  // for delete errors
+  const [deleteError, setDeleteError]         = useState("");
+  const [deleteErrorOpen, setDeleteErrorOpen] = useState(false);
 
   // 1) load record + major
   useEffect(() => {
@@ -48,7 +54,7 @@ export default function StudentCoursesPage() {
       .catch(e => setError(e.message));
   }, []);
 
-  // 2) fetch semester info, presented courses, and taken courses
+  // 2) fetch semester info, offered courses, and taken courses
   useEffect(() => {
     if (!recordId || !majorId) return;
     setLoading(true);
@@ -83,6 +89,24 @@ export default function StudentCoursesPage() {
         setEnrollError(msg);
         setEnrollErrorOpen(true);
       });
+  };
+
+  const handleRemove = (pcid) => {
+    api.delete("/taken-courses", {
+      data: {
+        record_id:   recordId,
+        semester_id: sid,
+        pcid,
+      }
+    })
+    .then(() => {
+      setTaken(prev => prev.filter(t => t.pcid !== pcid));
+    })
+    .catch(err => {
+      const msg = err.response?.data?.detail || "Unable to remove";
+      setDeleteError(msg);
+      setDeleteErrorOpen(true);
+    });
   };
 
   if (loading) {
@@ -177,19 +201,19 @@ export default function StudentCoursesPage() {
                     <TableCell>Room</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell align="right">Grade</TableCell>
+                    <TableCell align="center">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {taken.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} align="center">
+                      <TableCell colSpan={8} align="center">
                         You haven’t enrolled yet.
                       </TableCell>
                     </TableRow>
                   ) : (
                     taken.map(t => (
                       <TableRow key={t.pcid}>
-                        {/* assume the API returns these fields in `taken` */}
                         <TableCell>{t.course_code}</TableCell>
                         <TableCell>{t.course_name}</TableCell>
                         <TableCell>{t.professor}</TableCell>
@@ -200,6 +224,17 @@ export default function StudentCoursesPage() {
                         <TableCell>{t.status}</TableCell>
                         <TableCell align="right">
                           {t.grade != null ? t.grade : "—"}
+                        </TableCell>
+                        <TableCell align="center">
+                          {t.status === "RESERVED" && (
+                            <IconButton
+                              size="small"
+                              onClick={() => handleRemove(t.pcid)}
+                              title="Remove reservation"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -224,6 +259,22 @@ export default function StudentCoursesPage() {
           sx={{ width: "100%" }}
         >
           {enrollError}
+        </Alert>
+      </Snackbar>
+
+      {/* Remove error Snackbar */}
+      <Snackbar
+        open={deleteErrorOpen}
+        autoHideDuration={5000}
+        onClose={() => setDeleteErrorOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity="error"
+          onClose={() => setDeleteErrorOpen(false)}
+          sx={{ width: "100%" }}
+        >
+          {deleteError}
         </Alert>
       </Snackbar>
     </>

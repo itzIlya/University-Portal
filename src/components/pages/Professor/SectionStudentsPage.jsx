@@ -27,7 +27,7 @@ export default function SectionStudentsPage() {
         setStudents(data);
         // init grade inputs
         const g = {};
-        data.forEach((s) => { g[s.record_id] = s.grade || ""; });
+        data.forEach((s) => { g[s.record_id] = s.grade ?? ""; });
         setGrades(g);
       })
       .catch(() => setError("Failed to load students"))
@@ -50,6 +50,30 @@ export default function SectionStudentsPage() {
       .catch((err) => {
         setSnack({ open: true, msg: err.response?.data?.detail || "Error", sev: "error" });
       });
+  };
+
+  const markTaking = (student) => {
+    api.post("/taken-courses/status", {
+      record_id: student.record_id,
+      pcid,
+      to_status: "TAKING",
+    })
+    .then(() => {
+      // update local status
+      setStudents(prev =>
+        prev.map(s =>
+          s.record_id === student.record_id ? { ...s, status: "TAKING" } : s
+        )
+      );
+      setSnack({ open: true, msg: "Status updated to TAKING", sev: "success" });
+    })
+    .catch(err => {
+      setSnack({
+        open: true,
+        msg: err.response?.data?.detail || "Unable to update status",
+        sev: "error"
+      });
+    });
   };
 
   if (loading) return (
@@ -82,10 +106,17 @@ export default function SectionStudentsPage() {
                   <TableCell>Last</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Grade</TableCell>
-                  <TableCell align="right">Action</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
+                {students.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
+                      No students enrolled.
+                    </TableCell>
+                  </TableRow>
+                )}
                 {students.map((s) => (
                   <TableRow key={s.record_id}>
                     <TableCell>{s.student_number}</TableCell>
@@ -100,23 +131,27 @@ export default function SectionStudentsPage() {
                       />
                     </TableCell>
                     <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => saveGrade(s)}
-                      >
-                        Save
-                      </Button>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          onClick={() => saveGrade(s)}
+                        >
+                          Save
+                        </Button>
+                        {s.status === "RESERVED" && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => markTaking(s)}
+                          >
+                            Mark Taking
+                          </Button>
+                        )}
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
-                {students.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} align="center">
-                      No students enrolled.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </TableContainer>
