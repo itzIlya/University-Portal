@@ -1,20 +1,33 @@
 import { AppBar, Toolbar, Typography, Button, Stack } from "@mui/material";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import api from "../../../api/axios";
+import { useAuth } from "../../../context/AuthContext";
 
 const navLinks = [
-  { label: "Dashboard",   to: "/admin" },
+  { label: "Dashboard", to: "/admin" },
   // { label: "Semesters",   to: "/admin/semesters" },
   // { label: "Departments", to: "/admin/departments" },
   // { label: "Majors",      to: "/admin/majors" },
-  // { label: "Members",     to: "/admin/members" },   // ← NEW
+  // { label: "Members",     to: "/admin/members" },
 ];
 
 export default function AdminNavbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  /** return true when the current path begins with the link target */
   const isActive = (to) =>
     pathname === to || pathname.startsWith(to + "/");
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/signout");
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+    logout();
+    navigate("/", { replace: true });
+  };
 
   return (
     <AppBar position="static" elevation={2} sx={{ bgcolor: "primary.main" }}>
@@ -23,7 +36,7 @@ export default function AdminNavbar() {
           Admin&nbsp;Dashboard
         </Typography>
 
-        <Stack direction="row" spacing={2}>
+        <Stack direction="row" spacing={2} alignItems="center">
           {navLinks.map(({ label, to }) => (
             <Button
               key={to}
@@ -40,6 +53,19 @@ export default function AdminNavbar() {
               {label}
             </Button>
           ))}
+
+          <Button
+            onClick={handleLogout}
+            variant="outlined"
+            sx={{
+              textTransform: "none",
+              color: "white",
+              borderColor: "white",
+              "&:hover": { bgcolor: "primary.dark" },
+            }}
+          >
+            Logout
+          </Button>
         </Stack>
       </Toolbar>
     </AppBar>
