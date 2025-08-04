@@ -472,57 +472,85 @@ CREATE PROCEDURE add_presented_course (
     IN p_room_label       VARCHAR(50)  -- NULLABLE
 )
 BEGIN
-    DECLARE v_prof_id  CHAR(36);
+    DECLARE v_prof_id   CHAR(36);
     DECLARE v_course_id CHAR(36);
-    DECLARE v_sem_id   CHAR(36);
-    DECLARE v_room_id  CHAR(36);
-    DECLARE v_pcid     CHAR(36) DEFAULT (UUID());
+    DECLARE v_sem_id    CHAR(36);
+    DECLARE v_room_id   CHAR(36);
+    DECLARE v_pcid      CHAR(36) DEFAULT (UUID());
 
-    /*── guards ────────────────────────────────────────────────*/
-    IF p_capacity <= 0 OR p_max_capacity <= 0 OR p_capacity > p_max_capacity THEN
+    /* ───── guards ───────────────────────────────────────────── */
+    IF p_capacity <= 0
+       OR p_max_capacity <= 0
+       OR p_capacity > p_max_capacity THEN
         SIGNAL SQLSTATE '45000'
-          SET MESSAGE_TEXT = 'Invalid capacity values';
+            SET MESSAGE_TEXT = 'Invalid capacity values';
     END IF;
 
-    /*── 1. resolve professor (must already be staff) ──────────*/
+    /* ───── resolve professor (must be staff) ───────────────── */
     SELECT s.member_id INTO v_prof_id
       FROM staffs s
       JOIN members m ON m.mid = s.member_id
      WHERE m.national_id = p_prof_national_id
      LIMIT 1;
-
     IF v_prof_id IS NULL THEN
         SIGNAL SQLSTATE '45000'
-          SET MESSAGE_TEXT = 'Professor not found (must be staff)';
+            SET MESSAGE_TEXT = 'Professor not found (must be staff)';
     END IF;
 
-    /*── 2. resolve course ------------------------------------*/
+    /* ───── resolve course ──────────────────────────────────── */
     SELECT cid INTO v_course_id
       FROM courses WHERE course_name = p_course_name LIMIT 1;
     IF v_course_id IS NULL THEN
         SIGNAL SQLSTATE '45000'
-          SET MESSAGE_TEXT = 'course_name not found';
+            SET MESSAGE_TEXT = 'course_name not found';
     END IF;
 
-    /*── 3. resolve semester ----------------------------------*/
+    /* ───── resolve semester ────────────────────────────────── */
     SELECT sid INTO v_sem_id
       FROM semesters WHERE sem_title = p_sem_title LIMIT 1;
     IF v_sem_id IS NULL THEN
         SIGNAL SQLSTATE '45000'
-          SET MESSAGE_TEXT = 'sem_title not found';
+            SET MESSAGE_TEXT = 'sem_title not found';
     END IF;
 
-    /*── 4. optional room -------------------------------------*/
+    /* ───── optional room ───────────────────────────────────── */
     IF p_room_label IS NOT NULL THEN
         SELECT rid INTO v_room_id
           FROM rooms WHERE room_label = p_room_label LIMIT 1;
         IF v_room_id IS NULL THEN
             SIGNAL SQLSTATE '45000'
-              SET MESSAGE_TEXT = 'room_label not found';
+                SET MESSAGE_TEXT = 'room_label not found';
         END IF;
     END IF;
 
-    /*── 5. insert section ------------------------------------*/
+    /* ───── conflict check (room & time overlap) ────────────── */
+    IF v_room_id IS NOT NULL THEN
+        /*
+            Overlap logic:
+            • same semester AND same room
+            • day sets share at least one letter
+            • time ranges overlap   (startA < endB  AND  endA > startB)
+        */
+        IF EXISTS (
+            SELECT 1
+              FROM presented_courses pc
+             WHERE pc.semester_id = v_sem_id
+               AND pc.room_id     = v_room_id
+               AND pc.on_days REGEXP CONCAT('[', p_on_days ,']')   -- day overlap
+               AND (
+                     TIME(SUBSTRING_INDEX(pc.on_times,'-',1))
+                         < TIME(SUBSTRING_INDEX(p_on_times,'-',-1))
+                     AND
+                     TIME(SUBSTRING_INDEX(pc.on_times,'-',-1))
+                         > TIME(SUBSTRING_INDEX(p_on_times,'-',1))
+                   )
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Room/time conflict with another section';
+        END IF;
+    END IF;
+
+    /* ───── insert section ──────────────────────────────────── */
     INSERT INTO presented_courses (
         pcid, prof_id, capacity, max_capacity,
         semester_id, on_days, on_times, room_id, course_id
@@ -532,6 +560,7 @@ BEGIN
         v_sem_id, p_on_days, p_on_times, v_room_id, v_course_id
     );
 
+    /* return new pcid */
     SELECT v_pcid AS pcid;
 END//
 

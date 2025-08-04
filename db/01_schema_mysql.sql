@@ -160,15 +160,19 @@ CREATE TABLE taken_courses (
     record_id   CHAR(36) NOT NULL,
     semester_id CHAR(36) NOT NULL,
     pcid        CHAR(36) NOT NULL,        -- FK → presented_courses
-    status ENUM('RESERVED','TAKING','COMPLETED') NOT NULL DEFAULT 'RESERVED',
-    grade       DECIMAL(4,2),
+    status      ENUM('RESERVED','TAKING','COMPLETED')
+                NOT NULL DEFAULT 'RESERVED',
+    grade       DECIMAL(4,2) NOT NULL DEFAULT 0,   -- never NULL
     PRIMARY KEY (record_id, semester_id, pcid),
+
     FOREIGN KEY (record_id, semester_id)
         REFERENCES student_semesters(record_id, semester_id)
         ON DELETE CASCADE,
-    FOREIGN KEY (pcid) REFERENCES presented_courses(pcid)
+    FOREIGN KEY (pcid)
+        REFERENCES presented_courses(pcid),
+
     CONSTRAINT chk_grade_range
-        CHECK (grade BETWEEN 0 AND 20);
+        CHECK (grade BETWEEN 0 AND 20)
 ) ENGINE = InnoDB;
 
 -- ── optional audit table ─────────────────────────────────────
