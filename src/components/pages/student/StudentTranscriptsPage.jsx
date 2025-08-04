@@ -47,16 +47,16 @@ export default function StudentTranscriptsPage() {
       .catch((e) => setError(e.message));
   }, []);
 
-  // 1b) once record_id → fetch overall GPA from student-records endpoint
+  // 1b) once record_id → fetch overall GPA from dedicated GPA endpoint
   useEffect(() => {
     if (!recordId) return;
-    api.get("/student-records")
+    api.get("/student-record-gpa", { params: { record_id: recordId } })
       .then(({ data }) => {
-        const me = data.find(r => r.record_id === recordId);
-        setOverallGpa(me?.gpa ?? null);
+        // expected response: { gpa: <number> }
+        setOverallGpa(data.gpa);
       })
       .catch(() => {
-        // fail silently; overallGpa will stay null
+        // ignore errors; overallGpa remains null
       });
   }, [recordId]);
 
@@ -82,7 +82,8 @@ export default function StudentTranscriptsPage() {
   useEffect(() => {
     if (!selectedSid) return;
     setLoading(true);
-    api.get("/my-taken-courses", { params: { semester_id: selectedSid } })
+    api
+      .get("/my-taken-courses", { params: { semester_id: selectedSid } })
       .then(({ data }) => setCourses(data))
       .catch(() => setError("Failed to load transcript"))
       .finally(() => setLoading(false));
@@ -125,7 +126,9 @@ export default function StudentTranscriptsPage() {
                 onChange={(e) => setSelectedSid(e.target.value)}
               >
                 {enrolled.map((row) => {
-                  const title = semesters.find((s) => s.sid === row.semester_id)?.sem_title;
+                  const title = semesters.find(
+                    (s) => s.sid === row.semester_id
+                  )?.sem_title;
                   return (
                     <MenuItem key={row.semester_id} value={row.semester_id}>
                       {title}
