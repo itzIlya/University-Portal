@@ -521,7 +521,7 @@ class TakenCourseListView(APIView):
         ).data
 
         return Response(data, status=status.HTTP_200_OK)
-        
+
 class MemberListView(APIView):
     """
     GET /api/members   (admin only)
@@ -837,4 +837,40 @@ class StudentRecordListView(APIView):
             many=True
         ).data
 
+        return Response(data, status=status.HTTP_200_OK)
+    
+
+class RecordGPAVew(APIView):
+    """
+    GET /api/student-record-gpa?record_id=<uuid>
+
+    • Owner or admin only.
+    • Returns current GPA (avg of all COMPLETED courses for that record).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = RecordGPAQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        record_id = q.validated_data["record_id"]
+
+        # --- ownership check (unless admin) --------------------
+        if not request.user.is_staff:
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM std_records WHERE record_id=%s AND mid=%s",
+                    (record_id, request.user.id),
+                )
+                if cur.fetchone() is None:
+                    raise PermissionDenied("You do not own this student record")
+
+        # --- call stored procedure -----------------------------
+        try:
+            rows = call_procedure("calc_record_gpa", (record_id,))
+        except DBError as e:
+            return Response({"detail": e.msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        gpa = rows[0][0]    # might be NULL
+        data = RecordGPAResultSerializer.from_row(record_id, gpa)
         return Response(data, status=status.HTTP_200_OK)

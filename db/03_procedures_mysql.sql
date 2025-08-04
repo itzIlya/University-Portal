@@ -1251,6 +1251,29 @@ BEGIN
     ORDER  BY tc.semester_id, c.course_code;
 END//
 
+
+DROP PROCEDURE IF EXISTS calc_record_gpa//
+CREATE PROCEDURE calc_record_gpa (IN p_record_id CHAR(36))
+BEGIN
+    DECLARE v_gpa DECIMAL(4,2);
+
+    /* Average of COMPLETED courses with a non-NULL grade (0–20 scale) */
+    SELECT AVG(grade)
+      INTO v_gpa
+      FROM taken_courses
+     WHERE record_id = p_record_id
+       AND status     = 'COMPLETED'
+       AND grade IS NOT NULL;
+
+    /* Persist the result in std_records.gpa (optional but useful) */
+    UPDATE std_records
+       SET gpa = v_gpa
+     WHERE record_id = p_record_id;
+
+    /* Return to caller */
+    SELECT v_gpa AS gpa;
+END//
+
 /* #################################---------------------------------################################# */
 /* #################################| ***************************** |################################# */
 /* #################################| *          TRIGGERS         * |################################# */

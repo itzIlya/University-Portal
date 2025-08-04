@@ -656,3 +656,18 @@ class TakenCourseItemSerializer(serializers.Serializer):
     on_days      = serializers.CharField()
     on_times     = serializers.CharField()
     room         = serializers.CharField()
+
+    
+class RecordGPAQuerySerializer(serializers.Serializer):
+    record_id = serializers.CharField(max_length=36)
+
+class RecordGPAResultSerializer(serializers.Serializer):
+    record_id = serializers.CharField()
+    gpa       = serializers.FloatField(allow_null=True)
+
+
+    @staticmethod
+    def from_row(record_id, gpa):
+        return RecordGPAResultSerializer(
+            {"record_id": record_id, "gpa": gpa}
+        ).data
