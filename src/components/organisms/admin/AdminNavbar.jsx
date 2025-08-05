@@ -5,6 +5,9 @@ import { useAuth } from "../../../context/AuthContext";
 
 const navLinks = [
   { label: "Dashboard", to: "/admin" },
+  //{ label: "Profile", to: "/admin/profile" },
+   
+  
   // { label: "Semesters",   to: "/admin/semesters" },
   // { label: "Departments", to: "/admin/departments" },
   // { label: "Majors",      to: "/admin/majors" },

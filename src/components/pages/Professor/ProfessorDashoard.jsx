@@ -1,32 +1,42 @@
+// src/components/pages/professor/ProfessorDashboard.jsx
 import React, { useEffect, useState } from "react";
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Box,
   Paper,
   Avatar,
-  useTheme,
   Grid,
   Divider,
   Stack,
+  Button,
+  Typography,
+  TextField,
+  Alert,
+  CircularProgress,
   IconButton,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import SchoolIcon from "@mui/icons-material/School";
-import BookIcon from "@mui/icons-material/Book";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import api from "../../../api/axios";
 import ProfessorNavbar from "../../organisms/Professor/ProfessorNavbar";
 
 export default function ProfessorDashboard() {
-  const theme = useTheme();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [dept, setDept] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    fname: "",
+    lname: "",
+    national_id: "",
+    birthday: "",
+    username: "",
+  });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Animation variants for fade-in
   const fadeIn = {
@@ -36,10 +46,19 @@ export default function ProfessorDashboard() {
 
   // load my profile
   useEffect(() => {
-    api.get("/me").then(({ data }) => setProfile(data));
+    api.get("/me").then(({ data }) => {
+      setProfile(data);
+      setForm({
+        fname: data.fname || "",
+        lname: data.lname || "",
+        national_id: data.national_id || "",
+        birthday: data.birthday?.split("T")[0] || "",
+        username: data.username || "",
+      });
+    });
   }, []);
 
-  // load my department from staff list
+  // load my department
   useEffect(() => {
     if (!profile) return;
     api.get("/staff?role=PROF")
@@ -62,44 +81,37 @@ export default function ProfessorDashboard() {
           justifyContent: "center",
         }}
       >
-        <Typography>Loading profile…</Typography>
+        <CircularProgress />
       </Box>
     );
   }
+
+  const handleChange = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const saveProfile = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await api.put("/profile", form);
+      setProfile((p) => ({ ...p, ...form }));
+      setEditing(false);
+    } catch (err) {
+      setError(err.response?.data?.detail || "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #adbde5 0%, #adbde5 60%, #f3f4f6 100%)",
+        background:
+          "linear-gradient(135deg, #adbde5 0%, #adbde5 60%, #f3f4f6 100%)",
         position: "relative",
-        overflow: "hidden",
       }}
     >
-      {/* Decorative Icons */}
-      <Box
-        sx={{
-          position: "absolute",
-          top: 20,
-          left: 20,
-          opacity: 0.2,
-          transform: "rotate(-10deg)",
-        }}
-      >
-        {/* <BookIcon sx={{ fontSize: 80, color: "primary.contrastText" }} /> */}
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          bottom: 20,
-          right: 20,
-          opacity: 0.2,
-          transform: "rotate(10deg)",
-        }}
-      >
-        <AutoStoriesIcon sx={{ fontSize: 80, color: "primary.contrastText" }} />
-      </Box>
-
       <ProfessorNavbar />
 
       <Box sx={{ maxWidth: 1200, mx: "auto", my: { xs: 4, md: 6 }, px: 2 }}>
@@ -114,7 +126,8 @@ export default function ProfessorDashboard() {
               mb: 4,
             }}
           >
-            <Grid container spacing={3} alignItems="center">
+            <Grid container alignItems="center" spacing={2}>
+              {/* Avatar */}
               <Grid item>
                 <Avatar
                   sx={{
@@ -128,57 +141,106 @@ export default function ProfessorDashboard() {
                   {profile.fname?.[0] || "P"}
                 </Avatar>
               </Grid>
+
+              {/* Name */}
               <Grid item xs>
-                <Typography
-                  variant="h5"
-                  fontWeight={700}
-                  sx={{ color: "text.primary" }}
-                >
+                <Typography variant="h5" fontWeight={700}>
                   {profile.fname} {profile.lname}
                 </Typography>
               </Grid>
+
+              {/* Edit button */}
+              <Grid item>
+                <Button size="small" onClick={() => setEditing((e) => !e)}>
+                  {editing ? "Cancel" : "Edit Personal Info"}
+                </Button>
+              </Grid>
+
+              {/* Divider full width */}
               <Grid item xs={12}>
                 <Divider sx={{ bgcolor: "grey.300", my: 2 }} />
               </Grid>
-              {[
-                ["National ID", profile.national_id],
-                ["Department", dept || "—"],
+
+              {editing ? (
+                <>
+                  {/* Show validation error */}
+                  {error && (
+                    <Grid item xs={12}>
+                      <Alert severity="error">{error}</Alert>
+                    </Grid>
+                  )}
+
+                  {/* Editable fields */}
+                  {["fname", "lname", "national_id", "birthday", "username"].map(
+                    (key) => {
+                      const labels = {
+                        fname: "First Name",
+                        lname: "Last Name",
+                        national_id: "National ID",
+                        birthday: "Birthday",
+                        username: "Username",
+                      };
+                      return (
+                        <Grid item xs={12} md={6} key={key}>
+                          <TextField
+                            fullWidth
+                            label={labels[key]}
+                            type={key === "birthday" ? "date" : "text"}
+                            InputLabelProps={key === "birthday" ? { shrink: true } : {}}
+                            value={form[key]}
+                            onChange={handleChange(key)}
+                          />
+                        </Grid>
+                      );
+                    }
+                  )}
+
+                  {/* Save / Cancel */}
+                  <Grid item xs={12}>
+                    <Stack direction="row" justifyContent="flex-end" spacing={2}>
+                      <Button onClick={() => setEditing(false)} disabled={saving}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={saveProfile}
+                        disabled={saving}
+                      >
+                        {saving ? <CircularProgress size={20} /> : "Save"}
+                      </Button>
+                    </Stack>
+                  </Grid>
+                </>
+              ) : (
+                /* Static info display */
                 [
-                  "Birthday",
-                  profile.birthday
-                    ? new Date(profile.birthday).toLocaleDateString()
-                    : "—",
-                ],
-                ["Username", profile.username || "—"],
-              ].map(([label, val]) => (
-                <Grid item xs={12} md={6} key={label}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    {label}
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    fontWeight={500}
-                    sx={{ color: "text.primary" }}
-                  >
-                    {val}
-                  </Typography>
-                </Grid>
-              ))}
+                  ["National ID", profile.national_id],
+                  ["Department", dept || "—"],
+                  [
+                    "Birthday",
+                    profile.birthday
+                      ? new Date(profile.birthday).toLocaleDateString()
+                      : "—",
+                  ],
+                  ["Username", profile.username || "—"],
+                ].map(([label, val]) => (
+                  <Grid item xs={12} md={6} key={label}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      {label}
+                    </Typography>
+                    <Typography variant="body1">{val}</Typography>
+                  </Grid>
+                ))
+              )}
             </Grid>
           </Paper>
         </motion.div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={{
+        {/* Quick link to sections */}
+        <motion.div initial="hidden" animate="visible" variants={{
             hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-            },
-          }}
-        >
+            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+        }}>
           <Paper
             onClick={() => navigate("/professor/sections")}
             sx={{
@@ -194,27 +256,21 @@ export default function ProfessorDashboard() {
                 boxShadow: 4,
                 bgcolor: "primary.light",
                 "& .MuiTypography-root": { color: "primary.main" },
-                "& .MuiSvgIcon-root": { color: "primary.dark" },
               },
               transition: "all 0.3s ease",
             }}
           >
             <Stack direction="row" alignItems="center" spacing={2}>
-              <SchoolIcon sx={{ fontSize: 40, color: "text.primary" }} />
-              <Typography
-                fontWeight="bold"
-                sx={{ fontSize: { xs: "1rem", sm: "1.1rem" }, color: "text.primary" }}
-              >
+              <SchoolIcon sx={{ fontSize: 40 }} />
+              <Typography fontWeight="bold" sx={{ fontSize: "1.1rem" }}>
                 View My Sections
               </Typography>
             </Stack>
-            <IconButton sx={{ color: "primary.main" }}>
+            <IconButton>
               <ArrowForwardIosIcon />
             </IconButton>
           </Paper>
         </motion.div>
-
-        {/* Nested child routes will render here */}
       </Box>
     </Box>
   );
