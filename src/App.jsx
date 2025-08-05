@@ -20,7 +20,9 @@ import ProfessorDashboard from "./components/pages/Professor/ProfessorDashoard";
 import ProfessorSectionsPage from "./components/pages/Professor/ProfessorSectionsPage";
 import SectionStudentsPage from "./components/pages/Professor/SectionStudentsPage";
 import LandingPage from "./components/pages/LandingPage";
-
+import ProfessorLoadView from "./components/pages/admin/ProfessorLoadView";
+import MajorGPAView from "./components/pages/admin/MajorGPAView";
+import LowEnrollmentView from "./components/pages/admin/LowEnrollmentView";
 
 //import TestRecords from "./components/pages/student/TestRecords";
 
@@ -38,7 +40,6 @@ function App() {
             <AdminDashboard />
           </RequireAdmin>
         }
-        
       >
         <Route index element={<Navigate to="semesters" replace />} />
         <Route path="semesters" element={<SemesterPage />} />
@@ -48,7 +49,9 @@ function App() {
         <Route path="courses" element={<CourseCreatePage />} />
         <Route path="rooms" element={<RoomPage />} />
         <Route path="presented" element={<PresentedCoursePage />} />
-        {/* //<Route path="profile" element={<AdminProfilePage />} /> */}
+        <Route path="major-gpa" element={<MajorGPAView/>} />
+        <Route path="low-enrollment" element={<LowEnrollmentView />} />
+        <Route path="professor-load" element={<ProfessorLoadView />} />
       </Route>
 
       {/* student: three independent pages */}

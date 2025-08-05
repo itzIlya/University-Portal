@@ -25,20 +25,13 @@ import AdminCard from "../../molecules/AdminCard";
 /* we no longer include is_active here; backend dictates which semester is active */
 const emptySemester = {
   start_date: dayjs().format("YYYY-MM-DD"),
-  end_date:   dayjs().add(4, "month").format("YYYY-MM-DD"),
-  sem_title:  "",
+  end_date: dayjs().add(4, "month").format("YYYY-MM-DD"),
+  sem_title: "",
 };
 
 export default function SemesterPage() {
-  const {
-    items,
-    loading,
-    error,
-    setError,
-    newItem,
-    setNewItem,
-    create,
-  } = useCrudList("semesters", emptySemester);
+  const { items, loading, error, setError, newItem, setNewItem, create } =
+    useCrudList("semesters", emptySemester);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,9 +86,7 @@ export default function SemesterPage() {
           required
           InputLabelProps={{ shrink: true }}
           value={newItem.end_date}
-          onChange={(e) =>
-            setNewItem({ ...newItem, end_date: e.target.value })
-          }
+          onChange={(e) => setNewItem({ ...newItem, end_date: e.target.value })}
         />
         <Button variant="contained" type="submit">
           Add
@@ -146,9 +137,7 @@ export default function SemesterPage() {
                   <TableCell>{s.sem_title}</TableCell>
                   <TableCell>{s.start_date}</TableCell>
                   <TableCell>{s.end_date}</TableCell>
-                  <TableCell>
-                    {s.is_active ? "🟢" : "⚪️"}
-                  </TableCell>
+                  <TableCell>{s.is_active ? "🟢" : "⚪️"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

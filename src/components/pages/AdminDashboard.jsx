@@ -13,7 +13,7 @@ import {
   CircularProgress,
   IconButton,
 } from "@mui/material";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import PeopleIcon from "@mui/icons-material/People";
@@ -25,6 +25,9 @@ import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
 import ImportContactsIcon from "@mui/icons-material/ImportContacts";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import AutoStoriesIcon from "@mui/icons-material/AutoStories";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import AssignmentLateIcon from "@mui/icons-material/AssignmentLate";
+import GroupIcon from "@mui/icons-material/Group";
 import AdminNavbar from "../organisms/admin/AdminNavbar";
 import AdminCard from "../molecules/AdminCard";
 import api from "../../api/axios";
@@ -37,17 +40,23 @@ export default function AdminDashboard() {
   // Profile state
   const [profile, setProfile] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ fname: "", lname: "", national_id: "", birthday: "", username: "" });
+  const [form, setForm] = useState({
+    fname: "",
+    lname: "",
+    national_id: "",
+    birthday: "",
+    username: "",
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Animation variants for fade-in
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.1, ease: "easeOut" } },
   };
 
-  // load profile
+  // load my profile on mount
   useEffect(() => {
     api.get("/me").then(({ data }) => {
       setProfile(data);
@@ -78,6 +87,7 @@ export default function AdminDashboard() {
     }
   };
 
+  // while profile is loading, show a spinner
   if (!profile && atRoot) {
     return (
       <Box
@@ -97,7 +107,8 @@ export default function AdminDashboard() {
     <Box
       sx={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #adbde5 0%, #adbde5 60%, #f3f4f6 100%)",
+        background:
+          "linear-gradient(135deg, #adbde5 0%, #adbde5 60%, #f3f4f6 100%)",
         position: "relative",
         overflow: "hidden",
       }}
@@ -106,14 +117,28 @@ export default function AdminDashboard() {
 
       {atRoot ? (
         <Box sx={{ maxWidth: 900, mx: "auto", py: { xs: 4, md: 6 } }}>
-          {/* Profile Card */}
+          {/* — Profile Card — */}
           <motion.div initial="hidden" animate="visible" variants={fadeIn}>
             <Paper
-              sx={{ p: 4, borderRadius: 3, boxShadow: 4, bgcolor: "background.paper", mb: 4 }}
+              sx={{
+                p: 4,
+                borderRadius: 3,
+                boxShadow: 4,
+                bgcolor: "background.paper",
+                mb: 4,
+              }}
             >
               <Grid container alignItems="center" spacing={2}>
                 <Grid item>
-                  <Avatar sx={{ width: 80, height: 80, bgcolor: "primary.light", fontSize: 32, color: "text.primary" }}>
+                  <Avatar
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      bgcolor: "primary.light",
+                      fontSize: 32,
+                      color: "text.primary",
+                    }}
+                  >
                     {profile.fname?.[0] || "A"}
                   </Avatar>
                 </Grid>
@@ -130,22 +155,31 @@ export default function AdminDashboard() {
                 <Grid item xs={12}>
                   <Divider sx={{ bgcolor: "grey.300", my: 2 }} />
                 </Grid>
+
                 {editing ? (
-                  <>                
+                  <>
                     {error && (
                       <Grid item xs={12}>
                         <Alert severity="error">{error}</Alert>
                       </Grid>
                     )}
                     {Object.entries(form).map(([key, val]) => {
-                      const labels = { fname: "First Name", lname: "Last Name", national_id: "National ID", birthday: "Birthday", username: "Username" };
+                      const labels = {
+                        fname: "First Name",
+                        lname: "Last Name",
+                        national_id: "National ID",
+                        birthday: "Birthday",
+                        username: "Username",
+                      };
                       return (
                         <Grid item xs={12} md={6} key={key}>
                           <TextField
                             fullWidth
                             label={labels[key]}
                             type={key === "birthday" ? "date" : "text"}
-                            InputLabelProps={key === "birthday" ? { shrink: true } : {}}
+                            InputLabelProps={
+                              key === "birthday" ? { shrink: true } : {}
+                            }
                             value={val}
                             onChange={handleChange(key)}
                           />
@@ -157,62 +191,130 @@ export default function AdminDashboard() {
                         <Button onClick={() => setEditing(false)} disabled={saving}>
                           Cancel
                         </Button>
-                        <Button variant="contained" onClick={saveProfile} disabled={saving}>
+                        <Button
+                          variant="contained"
+                          onClick={saveProfile}
+                          disabled={saving}
+                        >
                           {saving ? <CircularProgress size={20} /> : "Save"}
                         </Button>
                       </Stack>
                     </Grid>
                   </>
                 ) : (
-                  Object.entries({ "National ID": profile.national_id, Birthday: profile.birthday ? new Date(profile.birthday).toLocaleDateString() : "—", Username: profile.username }).map(
-                    ([label, val]) => (
-                      <Grid item xs={12} md={6} key={label}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          {label}
-                        </Typography>
-                        <Typography variant="body1">{val || "—"}</Typography>
-                      </Grid>
-                    )
-                  )
+                  Object.entries({
+                    "National ID": profile.national_id,
+                    Birthday: profile.birthday
+                      ? new Date(profile.birthday).toLocaleDateString()
+                      : "—",
+                    Username: profile.username,
+                  }).map(([label, val]) => (
+                    <Grid item xs={12} md={6} key={label}>
+                      <Typography variant="subtitle2" color="text.secondary">
+                        {label}
+                      </Typography>
+                      <Typography variant="body1">{val || "—"}</Typography>
+                    </Grid>
+                  ))
                 )}
               </Grid>
             </Paper>
           </motion.div>
 
-          {/* Quick Links */}
+          {/* — Quick Links — */}
           <motion.div
             initial="hidden"
             animate="visible"
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } } }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+              },
+            }}
           >
-            <AdminCard sx={{ bgcolor: "background.paper", borderRadius: 3, p: 3, boxShadow: 4 }}>
+            <AdminCard sx={{ p: 3, boxShadow: 4, borderRadius: 3 }}>
               <Stack spacing={2}>
+                {/* existing links */}
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<PeopleIcon sx={{ color: "text.primary" }} />} label="View & Edit Users" onClick={() => navigate("/admin/members")} />
+                  <QuickLink
+                    icon={<PeopleIcon />}
+                    label="View & Edit Users"
+                    onClick={() => navigate("/admin/members")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<CalendarMonthIcon sx={{ color: "text.primary" }} />} label="Add Semester" onClick={() => navigate("/admin/semesters")} />
+                  <QuickLink
+                    icon={<CalendarMonthIcon />}
+                    label="Add Semester"
+                    onClick={() => navigate("/admin/semesters")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<BusinessIcon sx={{ color: "text.primary" }} />} label="Add Department" onClick={() => navigate("/admin/departments")} />
+                  <QuickLink
+                    icon={<BusinessIcon />}
+                    label="Add Department"
+                    onClick={() => navigate("/admin/departments")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<SchoolIcon sx={{ color: "text.primary" }} />} label="Add Major" onClick={() => navigate("/admin/majors")} />
+                  <QuickLink
+                    icon={<SchoolIcon />}
+                    label="Add Major"
+                    onClick={() => navigate("/admin/majors")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<MeetingRoomIcon sx={{ color: "text.primary" }} />} label="Add Rooms" onClick={() => navigate("/admin/rooms")} />
+                  <QuickLink
+                    icon={<LibraryBooksIcon />}
+                    label="Add Course"
+                    onClick={() => navigate("/admin/courses")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<LibraryBooksIcon sx={{ color: "text.primary" }} />} label="Add Course" onClick={() => navigate("/admin/courses")} />
+                  <QuickLink
+                    icon={<ImportContactsIcon />}
+                    label="Add Presented Course"
+                    onClick={() => navigate("/admin/presented")}
+                  />
                 </motion.div>
-                <Divider sx={{ bgcolor: "grey.300" }} />
+                <Divider />
+
+                {/* — new report links — */}
                 <motion.div variants={fadeIn}>
-                  <QuickLink icon={<ImportContactsIcon sx={{ color: "text.primary" }} />} label="Add Presented Course" onClick={() => navigate("/admin/presented")} />
+                  <QuickLink
+                    icon={<BarChartIcon />}
+                    label="Major GPA"
+                    onClick={() => navigate("/admin/major-gpa")}
+                  />
+                </motion.div>
+                <Divider />
+
+                <motion.div variants={fadeIn}>
+                  <QuickLink
+                    icon={<AssignmentLateIcon />}
+                    label="Low-Enrollment Courses"
+                    onClick={() => navigate("/admin/low-enrollment")}
+                  />
+                </motion.div>
+                <Divider />
+
+                <motion.div variants={fadeIn}>
+                  <QuickLink
+                    icon={<GroupIcon />}
+                    label="Professor Load"
+                    onClick={() => navigate("/admin/professor-load")}
+                  />
                 </motion.div>
               </Stack>
             </AdminCard>
@@ -225,16 +327,32 @@ export default function AdminDashboard() {
   );
 }
 
-// Helper QuickLink
+// — Helper QuickLink component —
 function QuickLink({ icon, label, onClick }) {
   return (
-    <motion.div whileHover={{ scale: 1.02, transition: { duration: 0.2 } }} whileTap={{ scale: 0.98 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ p: 3, borderRadius: 2, bgcolor: "background.paper", boxShadow: 2, cursor: "pointer", "&:hover": { boxShadow: 4, bgcolor: "primary.light", "& .MuiTypography-root": { color: "primary.main" }, "& .MuiSvgIcon-root": { color: "primary.dark" } }, transition: "all 0.3s ease" }} onClick={onClick}>
-        <Stack direction="row" alignItems="center" spacing={2}>
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{
+          p: 2,
+          borderRadius: 2,
+          bgcolor: "background.paper",
+          boxShadow: 1,
+          cursor: "pointer",
+          transition: "all 0.1s ease",
+          "&:hover": { boxShadow: 2, bgcolor: "primary.light" },
+        }}
+        onClick={onClick}
+      >
+        <Stack direction="row" alignItems="center" spacing={1}>
           {icon}
-          <Typography fontWeight="bold" sx={{ fontSize: { xs: "1rem", sm: "1.1rem" }, color: "text.primary" }}>{label}</Typography>
+          <Typography fontWeight="bold">{label}</Typography>
         </Stack>
-        <IconButton sx={{ color: "primary.main" }}><ArrowForwardIosIcon /></IconButton>
+        <IconButton>
+          <ArrowForwardIosIcon />
+        </IconButton>
       </Stack>
     </motion.div>
   );
