@@ -47,10 +47,6 @@ BEGIN
     ORDER BY s.term, c.code;
 END//
 
-
-/*───────────────────────────────────────────────────────────────
-  register_student.sql   – create / replace procedure
-───────────────────────────────────────────────────────────────*/
 DROP PROCEDURE IF EXISTS register_student//
 CREATE PROCEDURE register_student (
     IN  p_national_id  CHAR(20),
@@ -63,10 +59,10 @@ BEGIN
     DECLARE v_active_sem     CHAR(36);
     DECLARE v_student_number CHAR(10);
 
-    /* 1. resolve member ------------------------------------------------ */
+    /* 1. member ------------------------------------------------------- */
     SELECT mid
       INTO v_mid
-      FROM members
+      FROM vw_member_by_nid
      WHERE national_id = p_national_id
      LIMIT 1;
 
@@ -75,10 +71,10 @@ BEGIN
           SET MESSAGE_TEXT = 'No member with that national_id';
     END IF;
 
-    /* 2. resolve major -------------------------------------------------- */
+    /* 2. major -------------------------------------------------------- */
     SELECT major_id
       INTO v_major_id
-      FROM majors
+      FROM vw_major_by_name
      WHERE major_name = p_major_name
      LIMIT 1;
 
@@ -87,51 +83,45 @@ BEGIN
           SET MESSAGE_TEXT = 'No such major';
     END IF;
 
-    /* 3. duplicate check ----------------------------------------------- */
+    /* 3. duplicate guard --------------------------------------------- */
     IF EXISTS (
         SELECT 1 FROM std_records
-         WHERE mid = v_mid AND major_id = v_major_id
+        WHERE  mid = v_mid AND major_id = v_major_id
     ) THEN
         SIGNAL SQLSTATE '45000'
           SET MESSAGE_TEXT = 'Student already registered for this major';
     END IF;
 
-    /* 4. get active semester ------------------------------------------- */
-    SELECT sid
-      INTO v_active_sem
-      FROM semesters
-     WHERE is_active = TRUE
-     ORDER BY start_date DESC
-     LIMIT 1;
+    /* 4. active semester --------------------------------------------- */
+    SELECT sid INTO v_active_sem FROM vw_active_semester LIMIT 1;
 
     IF v_active_sem IS NULL THEN
         SIGNAL SQLSTATE '45000'
           SET MESSAGE_TEXT = 'No active semester defined';
     END IF;
 
-    /* 5. generate a UNIQUE 10-char student number ---------------------- */
+    /* 5. unique 10-char student number ------------------------------- */
     SET v_student_number = SUBSTRING(REPLACE(UUID(),'-',''),1,10);
 
-    WHILE EXISTS (
-        SELECT 1 FROM std_records WHERE student_number = v_student_number
-    ) DO
+    WHILE EXISTS (SELECT 1 FROM std_records
+                   WHERE student_number = v_student_number) DO
         SET v_student_number = SUBSTRING(REPLACE(UUID(),'-',''),1,10);
     END WHILE;
 
-    /* 6. insert the record --------------------------------------------- */
+    /* 6. insert record ------------------------------------------------ */
     INSERT INTO std_records (mid, major_id, entrance_sem, student_number)
     VALUES (v_mid, v_major_id, v_active_sem, v_student_number);
 
-    /* 7. return record_id + student_number ----------------------------- */
-    SELECT record_id, v_student_number AS student_number, v_active_sem AS entrance_sem
+    /* 7. return payload ---------------------------------------------- */
+    SELECT record_id, student_number, entrance_sem
       INTO v_record_id, v_student_number, v_active_sem
       FROM std_records
      WHERE mid = v_mid AND major_id = v_major_id
      LIMIT 1;
 
-    SELECT v_record_id   AS record_id,
+    SELECT v_record_id     AS record_id,
            v_student_number AS student_number,
-           v_active_sem  AS entrance_sem;
+           v_active_sem    AS entrance_sem;
 END//
 
 

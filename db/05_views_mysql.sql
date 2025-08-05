@@ -30,3 +30,22 @@ FROM   majors m
 LEFT JOIN vw_record_gpa rg ON rg.major_id = m.major_id
 GROUP BY m.major_id, m.major_name
 ORDER BY m.major_name;
+
+
+/* ── member lookup by national-id ─────────────────────────── */
+CREATE OR REPLACE VIEW vw_member_by_nid AS
+SELECT national_id, mid
+FROM   members;
+
+/* ── major lookup by name ─────────────────────────────────── */
+CREATE OR REPLACE VIEW vw_major_by_name AS
+SELECT major_name, major_id, did
+FROM   majors;
+
+/* ── “current” active semester (one row) ──────────────────── */
+CREATE OR REPLACE VIEW vw_active_semester AS
+SELECT sid
+FROM   semesters
+WHERE  is_active = TRUE
+ORDER BY start_date DESC
+LIMIT 1;
