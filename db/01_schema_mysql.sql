@@ -177,11 +177,12 @@ CREATE TABLE taken_courses (
 
 -- ── optional audit table ─────────────────────────────────────
 CREATE TABLE grade_audit (
-    audit_id    CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    record_id   CHAR(36) NOT NULL,
-    semester_id CHAR(36) NOT NULL,
-    pcid        CHAR(36) NOT NULL,
-    old_grade   DECIMAL(4,2),
-    new_grade   DECIMAL(4,2 ),
-    changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    audit_id      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    record_id     CHAR(36) NOT NULL,
+    semester_id   CHAR(36) NOT NULL,
+    pcid          CHAR(36) NOT NULL,
+    old_grade     DECIMAL(4,2),
+    new_grade     DECIMAL(4,2),
+    actor_mid     CHAR(36) NOT NULL,             -- who made the change
+    changed_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE = InnoDB;

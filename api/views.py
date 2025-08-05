@@ -874,3 +874,109 @@ class RecordGPAVew(APIView):
         gpa = rows[0][0]    # might be NULL
         data = RecordGPAResultSerializer.from_row(record_id, gpa)
         return Response(data, status=status.HTTP_200_OK)
+    
+class ProfileUpdateView(APIView):
+    """
+    PUT /api/profile                → update your own profile
+    PUT /api/profile?member_mid=<id> (admin only)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request):
+        target_mid = request.query_params.get("member_mid") or request.user.id
+
+        if target_mid != request.user.id and not request.user.is_staff:
+            raise PermissionDenied("Only admins may edit other members")
+
+        ser = ProfileUpdateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        result = ser.save(target_mid)
+        return Response(result, status=status.HTTP_200_OK)
+    
+class ProfessorCourseLoadView(APIView):
+    """
+    GET /api/professor-course-load
+        → list professors and how many sections they teach this semester
+    """
+    permission_classes = [permissions.IsAuthenticated]   # ← change to IsAdminUser if desired
+
+    def get(self, request):
+        try:
+            rows = call_procedure("list_professor_course_load", ())
+        except DBError as e:
+            return Response({"detail": e.msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data = ProfessorLoadItemSerializer(
+            [
+                {
+                    "prof_mid":    r[0],
+                    "fname":       r[1],
+                    "lname":       r[2],
+                    "department":  r[3],
+                    "course_load": int(r[4]),
+                }
+                for r in rows
+            ],
+            many=True,
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+    
+class LowEnrolmentCourseView(APIView):
+    """
+    GET /api/low-enrolment-courses[?threshold=N]
+
+    Lists sections whose current enrolment < threshold (default 10).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = LowEnrollQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        threshold = q.validated_data.get("threshold", 10)
+
+        try:
+            rows = call_procedure("list_low_enrolment_courses", (threshold,))
+        except DBError as e:
+            return Response({"detail": e.msg},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data = LowEnrollItemSerializer(
+            [
+                {
+                    "pcid":         r[0],
+                    "course_code":  r[1],
+                    "course_name":  r[2],
+                    "semester":     r[3],
+                    "max_capacity": int(r[4]),
+                    "enrolled_cnt": int(r[5]),
+                }
+                for r in rows
+            ],
+            many=True,
+        ).data
+        return Response(data, status=status.HTTP_200_OK)
+    
+class MajorGPAView(APIView):
+    """
+    GET /api/major-gpa   – average GPA of each major (completed courses only)
+    """
+    permission_classes = [permissions.IsAuthenticated]   # change to IsAdminUser if needed
+
+    def get(self, request):
+        with connection.cursor() as cur:
+            cur.execute("SELECT major_id, major_name, avg_gpa FROM vw_major_avg_gpa")
+            rows = cur.fetchall()
+
+        data = MajorGPAItemSerializer(
+            [
+                {
+                    "major_id":   r[0],
+                    "major_name": r[1],
+                    "avg_gpa":    r[2],
+                }
+                for r in rows
+            ],
+            many=True,
+        ).data
+        return Response(data, status=status.HTTP_200_OK)

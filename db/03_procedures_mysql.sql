@@ -1274,6 +1274,140 @@ BEGIN
     SELECT v_gpa AS gpa;
 END//
 
+
+
+DROP PROCEDURE IF EXISTS update_member_profile//
+CREATE PROCEDURE update_member_profile (
+    IN p_mid           CHAR(36),
+    IN p_fname         VARCHAR(100),  -- may be NULL  ⇒ keep existing
+    IN p_lname         VARCHAR(100),
+    IN p_birthday      DATE,
+    IN p_username      VARCHAR(150),
+    IN p_password_hash VARCHAR(256)   -- NULL  ⇒ don’t change
+)
+BEGIN
+    /* 1. Load current values --------------------------------------- */
+    DECLARE v_fname    VARCHAR(100);
+    DECLARE v_lname    VARCHAR(100);
+    DECLARE v_birthday DATE;
+    DECLARE v_username VARCHAR(150);
+
+    SELECT m.fname, m.lname, m.birthday, c.username
+      INTO v_fname,   v_lname, v_birthday, v_username
+      FROM members m
+      JOIN credentials c ON c.member_id = m.mid
+     WHERE m.mid = p_mid
+     LIMIT 1;
+
+    /* 2. Resolve “keep current” if parameter is NULL --------------- */
+    SET p_fname    = COALESCE(p_fname,    v_fname);
+    SET p_lname    = COALESCE(p_lname,    v_lname);
+    SET p_birthday = COALESCE(p_birthday, v_birthday);
+    SET p_username = COALESCE(p_username, v_username);
+
+    /* 3. Uniqueness guard on username ------------------------------ */
+    IF EXISTS (
+        SELECT 1 FROM credentials
+         WHERE username = p_username
+           AND member_id <> p_mid
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'username already taken';
+    END IF;
+
+    /* 4. UPDATEs ---------------------------------------------------- */
+    UPDATE members
+       SET fname    = p_fname,
+           lname    = p_lname,
+           birthday = p_birthday
+     WHERE mid = p_mid;
+
+    UPDATE credentials
+       SET username = p_username
+     WHERE member_id = p_mid;
+
+    IF p_password_hash IS NOT NULL THEN
+        UPDATE credentials
+           SET password_hash = p_password_hash
+         WHERE member_id = p_mid;
+    END IF;
+
+    /* 5. Return fresh row ------------------------------------------ */
+    SELECT
+        m.mid,
+        m.fname,
+        m.lname,
+        m.birthday,
+        c.username
+    FROM members m
+    JOIN credentials c ON c.member_id = m.mid
+    WHERE m.mid = p_mid;
+END//
+
+
+DROP PROCEDURE IF EXISTS list_professor_course_load//
+CREATE PROCEDURE list_professor_course_load ()
+BEGIN
+    DECLARE v_active_sid CHAR(36);
+
+    /* -------- 1. active semester ---------------------------------- */
+    SELECT sid INTO v_active_sid
+      FROM semesters
+     WHERE is_active = TRUE
+     ORDER BY start_date DESC
+     LIMIT 1;
+
+    IF v_active_sid IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'No active semester defined';
+    END IF;
+
+    /* -------- 2. course-load per professor ------------------------- */
+    SELECT
+        m.mid        AS prof_mid,
+        m.fname,
+        m.lname,
+        d.department_name,
+        COUNT(*)     AS course_load
+    FROM presented_courses pc
+    JOIN members   m  ON m.mid = pc.prof_id
+    /* department via current worker role */
+    JOIN workers   w  ON w.member_id = pc.prof_id
+                     AND (w.end_date IS NULL OR w.end_date >= CURDATE())
+    JOIN departments d ON d.did = w.did
+    WHERE pc.semester_id = v_active_sid
+      AND w.staff_role   = 'PROF'
+    GROUP BY m.mid, m.fname, m.lname, d.department_name
+    ORDER BY course_load DESC;
+END//
+
+
+
+DROP PROCEDURE IF EXISTS list_low_enrolment_courses//
+CREATE PROCEDURE list_low_enrolment_courses (
+    IN p_threshold INT
+)
+BEGIN
+    IF p_threshold IS NULL OR p_threshold < 0 THEN
+        SET p_threshold = 10;   -- default
+    END IF;
+
+    SELECT
+        pc.pcid,
+        c.course_code,
+        c.course_name,
+        s.sem_title         AS semester,
+        pc.max_capacity,
+        COUNT(tc.pcid)      AS enrolled_cnt
+    FROM presented_courses pc
+    JOIN courses    c  ON c.cid = pc.course_id
+    JOIN semesters  s  ON s.sid = pc.semester_id
+    LEFT JOIN taken_courses tc  ON tc.pcid = pc.pcid
+    GROUP BY pc.pcid, c.course_code, c.course_name,
+             s.sem_title, pc.max_capacity
+    HAVING COUNT(tc.pcid) < p_threshold
+    ORDER BY s.sem_title, c.course_code;
+END//
 /* #################################---------------------------------################################# */
 /* #################################| ***************************** |################################# */
 /* #################################| *          TRIGGERS         * |################################# */
@@ -1316,4 +1450,27 @@ BEGIN
 END//
 
 
+DROP TRIGGER IF EXISTS trg_taken_courses_grade_log//
+CREATE TRIGGER trg_taken_courses_grade_log
+BEFORE UPDATE ON taken_courses
+FOR EACH ROW
+BEGIN
+    /* fire *only* if the grade is different (NULL-safe) */
+    IF NOT (NEW.grade <=> OLD.grade) THEN
+        INSERT INTO grade_audit (
+            record_id, semester_id, pcid,
+            old_grade, new_grade,
+            actor_mid
+        )
+        VALUES (
+            OLD.record_id,
+            OLD.semester_id,
+            OLD.pcid,
+            OLD.grade,
+            NEW.grade,
+            COALESCE(@current_mid,
+                     '00000000-0000-0000-0000-000000000000')
+        );
+    END IF;
+END//
 DELIMITER ;

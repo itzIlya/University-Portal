@@ -671,3 +671,66 @@ class RecordGPAResultSerializer(serializers.Serializer):
         return RecordGPAResultSerializer(
             {"record_id": record_id, "gpa": gpa}
         ).data
+    
+class ProfileUpdateSerializer(serializers.Serializer):
+    fname         = serializers.CharField(max_length=100, required=False)
+    lname         = serializers.CharField(max_length=100, required=False)
+    birthday      = serializers.DateField(required=False)
+    username      = serializers.CharField(max_length=150, required=False)
+    password_hash = serializers.CharField(max_length=256, required=False, allow_null=True)
+
+    def validate(self, data):
+        if not data:
+            raise serializers.ValidationError("No fields provided")
+        return data
+
+    def save(self, member_mid):
+        row = self._call_proc(member_mid)
+        return {
+            "mid":      row[0],
+            "fname":    row[1],
+            "lname":    row[2],
+            "birthday": row[3],
+            "username": row[4],
+        }
+
+    def _call_proc(self, mid):
+        v = self.validated_data
+        try:
+            rows = call_procedure(
+                "update_member_profile",
+                (
+                    mid,
+                    v.get("fname"),
+                    v.get("lname"),
+                    v.get("birthday"),
+                    v.get("username"),
+                    v.get("password_hash"),
+                ),
+            )
+        except DBError as e:
+            raise serializers.ValidationError({"detail": e.msg})
+        return rows[0]
+    
+class ProfessorLoadItemSerializer(serializers.Serializer):
+    prof_mid     = serializers.CharField()
+    fname        = serializers.CharField()
+    lname        = serializers.CharField()
+    department   = serializers.CharField()
+    course_load  = serializers.IntegerField()
+
+class LowEnrollQuerySerializer(serializers.Serializer):
+    threshold = serializers.IntegerField(min_value=0, required=False)
+
+class LowEnrollItemSerializer(serializers.Serializer):
+    pcid          = serializers.CharField()
+    course_code   = serializers.CharField()
+    course_name   = serializers.CharField()
+    semester      = serializers.CharField()
+    max_capacity  = serializers.IntegerField()
+    enrolled_cnt  = serializers.IntegerField()
+
+class MajorGPAItemSerializer(serializers.Serializer):
+    major_id   = serializers.CharField()
+    major_name = serializers.CharField()
+    avg_gpa    = serializers.FloatField(allow_null=True)

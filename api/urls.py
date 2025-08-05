@@ -66,6 +66,13 @@ urlpatterns = [
          name="taken-course-list"),
 
     path("student-record-gpa", RecordGPAVew.as_view(), name="record-gpa"),
+    path("profile", ProfileUpdateView.as_view(), name="profile-update"),
+    path("professor-course-load", ProfessorCourseLoadView.as_view(),
+         name="professor-course-load"),
+    path("low-enrolment-courses",
+         LowEnrolmentCourseView.as_view(),
+         name="low-enrolment-courses"),
+    path("major-gpa", MajorGPAView.as_view(), name="major-gpa"),
 
 
 ]
