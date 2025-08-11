@@ -1,4 +1,4 @@
-/* ------------------------ RoomPage.jsx ------------------------ */
+
 import {
     Box, Paper, Grid, TextField, Button, Snackbar, Alert,
     Stack, Typography, CircularProgress, Table, TableHead,
@@ -11,14 +11,13 @@ import {
   import useCrudList from "../../../hooks/useCrudList";
   import AdminCard   from "../../molecules/AdminCard";
   
-  /* —— blank form —— */
   const empty = { room_label: "", capacity: "" };
   
   export default function RoomPage() {
-    /* bump refreshKey whenever we want a fresh GET */
+    /* refreshKey whenever we want a fresh GET */
     const [refreshKey, setRefreshKey] = useState(0);
   
-    /* list of rooms (GET /api/rooms must exist) */
+    /* list of rooms */
     const {
       items: rooms,
       loading: loadingRooms,
@@ -31,7 +30,7 @@ import {
   
     const handle = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   
-    /* create room ────────── */
+    /* create room  */
     const submit = async (e) => {
       e.preventDefault();
   
@@ -51,7 +50,7 @@ import {
         });
         setSnack({ open:true, msg:"Room created ✔︎", sev:"success" });
         setForm(empty);
-        setRefreshKey((k) => k + 1);          // ← trigger fresh GET
+        setRefreshKey((k) => k + 1);          // trigger fresh GET
       } catch (err) {
         console.error(err);
         setSnack({
@@ -62,7 +61,6 @@ import {
       }
     };
   
-    /* UI ─────────────────── */
     return (
       <Box sx={{ p:{ xs:2, md:4 } }}>
         <AdminCard>

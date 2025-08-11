@@ -19,17 +19,17 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function SignInForm() {
   const [formData, setFormData] = useState({ username: "", password: "" });
-  const [errors,   setErrors]   = useState({ username: "", password: "" });
-  const [showPw,   setShowPw]   = useState(false);
-  const [snack,    setSnack]    = useState({ open:false, msg:"", sev:"error" });
+  const [errors, setErrors] = useState({ username: "", password: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [snack, setSnack] = useState({ open: false, msg: "", sev: "error" });
 
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(f => ({ ...f, [name]: value }));
-    setErrors(e => ({ ...e, [name]: "" }));
+    setFormData((f) => ({ ...f, [name]: value }));
+    setErrors((e) => ({ ...e, [name]: "" }));
   };
 
   const handleSubmit = async (e) => {
@@ -55,24 +55,23 @@ export default function SignInForm() {
       }
 
       // non-admin: check if professor (teaches any section)
-      try {
+     
         const profRes = await api.get("my-presented-courses");
         if (profRes.data.length > 0) {
           return navigate("/professor", { replace: true });
-        }
-      } catch {
-        /* if this call fails, we'll just treat as student */
-      }
-
-      // default → student
+        
+      } 
+      // navigate to student dashboard if student
       navigate("/student", { replace: true });
-    }
-    catch (err) {
+      
+    } catch (err) {
       console.error("Sign-in error:", err);
       const data = err.response?.data;
       const msg =
         data?.detail ||
-        Object.values(data || {}).flat().join("\n") ||
+        Object.values(data || {})
+          .flat()
+          .join("\n") ||
         (err.response?.status === 400
           ? "Bad request: Check username/password"
           : err.response?.status === 403
@@ -96,7 +95,7 @@ export default function SignInForm() {
           width: "100%",
           maxWidth: 460,
         }}
-      > 
+      >
         <Typography variant="h4" fontWeight={700} textAlign="center" mb={3}>
           Sign&nbsp;in
         </Typography>

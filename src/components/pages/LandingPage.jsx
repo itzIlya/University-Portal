@@ -39,7 +39,6 @@ export default function LandingPage() {
         overflow: "hidden",
       }}
     >
-      {/* Decorative Icons */}
       <Box
         sx={{
           position: "absolute",
@@ -65,7 +64,6 @@ export default function LandingPage() {
 
       <Container maxWidth="lg">
         <Grid container spacing={6} alignItems="center" justifyContent="center">
-          {/* Left column: Text + Buttons */}
           <Grid item xs={12} md={6}>
             <motion.div
               initial="hidden"

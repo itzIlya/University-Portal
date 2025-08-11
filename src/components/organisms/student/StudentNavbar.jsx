@@ -1,4 +1,3 @@
-// src/components/organisms/StudentNavbar.jsx
 import React from "react";
 import { AppBar, Toolbar, Typography, Button, Stack } from "@mui/material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
@@ -7,8 +6,6 @@ import { useAuth } from "../../../context/AuthContext";
 
 const navLinks = [
   { label: "Dashboard", to: "/student" },
-  // { label: "Semesters",  to: "/student/semesters" },
-  // { label: "Transcripts", to: "/student/transcripts" },
 ];
 
 export default function StudentNavbar() {

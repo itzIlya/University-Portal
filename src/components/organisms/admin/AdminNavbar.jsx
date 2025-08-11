@@ -4,14 +4,8 @@ import api from "../../../api/axios";
 import { useAuth } from "../../../context/AuthContext";
 
 const navLinks = [
+  // links in the navbar appear here 
   { label: "Dashboard", to: "/admin" },
-  //{ label: "Profile", to: "/admin/profile" },
-   
-  
-  // { label: "Semesters",   to: "/admin/semesters" },
-  // { label: "Departments", to: "/admin/departments" },
-  // { label: "Majors",      to: "/admin/majors" },
-  // { label: "Members",     to: "/admin/members" },
 ];
 
 export default function AdminNavbar() {

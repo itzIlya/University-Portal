@@ -2,7 +2,6 @@ import { Box } from '@mui/material';
 import Input from '../atoms/input';
 import Typography from '../atoms/Typography';
 
-// Form field molecule with label and input
 const FormField = ({ label, error, helperText, ...inputProps }) => {
   return (
     <Box sx={{ mb: 2 }}>

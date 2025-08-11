@@ -1,4 +1,4 @@
-// src/components/pages/DepartmentPage.jsx
+
 import React, { useState, useEffect } from "react";
 import {
   Typography,
@@ -55,7 +55,7 @@ export default function DepartmentPage() {
         const { data } = await api.get("/members");
         setMembers(data);
       } catch {
-        /* ignore */
+ 
       } finally {
         setMembersLoading(false);
       }

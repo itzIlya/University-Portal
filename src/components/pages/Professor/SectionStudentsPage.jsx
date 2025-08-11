@@ -1,4 +1,4 @@
-// src/components/pages/professor/SectionStudentsPage.jsx
+
 import React, { useEffect, useState } from "react";
 import {
   Box, Typography, Paper, Table, TableBody,

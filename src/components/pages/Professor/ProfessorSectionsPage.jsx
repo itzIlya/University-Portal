@@ -1,4 +1,4 @@
-// src/components/pages/professor/ProfessorSectionsPage.jsx
+
 import React, { useEffect, useState } from "react";
 import {
   Box,

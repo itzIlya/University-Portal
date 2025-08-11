@@ -1,4 +1,3 @@
-// src/components/pages/student/StudentTranscriptsPage.jsx
 
 import React, { useEffect, useState } from "react";
 import {
@@ -29,8 +28,8 @@ export default function StudentTranscriptsPage() {
   const navigate = useNavigate();
 
   const [recordId, setRecordId]       = useState(null);
-  const [enrolled, setEnrolled]       = useState([]);   // [{ semester_id, sem_status, sem_gpa }, …]
-  const [semesters, setSemesters]     = useState([]);   // all semesters metadata
+  const [enrolled, setEnrolled]       = useState([]);  
+  const [semesters, setSemesters]     = useState([]); 
   const [selectedSid, setSelectedSid] = useState("");
   const [courses, setCourses]         = useState([]);
   const [overallGpa, setOverallGpa]   = useState(null);
@@ -60,7 +59,7 @@ export default function StudentTranscriptsPage() {
       });
   }, [recordId]);
 
-  // 2) once record_id → load enrolled semesters + all semester titles
+  // 2) once record_id : load enrolled semesters + all semester titles
   useEffect(() => {
     if (!recordId) return;
     setLoading(true);
@@ -78,7 +77,7 @@ export default function StudentTranscriptsPage() {
       .finally(() => setLoading(false));
   }, [recordId]);
 
-  // 3) whenever selectedSid changes → fetch that semester’s taken courses
+  // 3) whenever selectedSid changes : fetch that semester’s taken courses
   useEffect(() => {
     if (!selectedSid) return;
     setLoading(true);
@@ -102,7 +101,6 @@ export default function StudentTranscriptsPage() {
       <StudentNavbar />
 
       <Box sx={{ maxWidth: 1200, mx: "auto", my: 4, px: 2 }}>
-        {/* header + back */}
         <Stack direction="row" alignItems="center" spacing={2} mb={3}>
           <Button onClick={() => navigate(-1)}>← Back</Button>
           <Typography variant="h5" fontWeight={700}>

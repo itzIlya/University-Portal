@@ -1,4 +1,4 @@
-// src/api/axios.js
+
 import axios from "axios";
 
 function getCSRFCookie(name = "csrftoken") {
@@ -8,16 +8,16 @@ function getCSRFCookie(name = "csrftoken") {
     ?.split("=")[1];
 }
 
-/* ---------- Axios instance ---------- */
+/* Axios instance  */
 const api = axios.create({
-  baseURL: "/api/",          // browser → 5179 → proxy → 8000
+  baseURL: "/api/",          // examole: browser → 5179 → proxy → 8000
   withCredentials: true,     // => cookies both ways
   headers: { "Content-Type": "application/json" },
   xsrfCookieName: "csrftoken",
   xsrfHeaderName: "X-CSRFToken",
 });
 
-/* ---------- Make sure every unsafe request has a token ---------- */
+/*  Make sure every unsafe request has a token  */
 let csrfReady;   // memorised promise so we fetch the cookie only once
 
 function ensureCSRFCookie() {

@@ -42,7 +42,7 @@ const RegistrationForm = () => {
 
     try {
       const res = await api.post(
-        "signup", // → POST /api/signup
+        "signup", 
         {
           fname: formData.fname,
           lname: formData.lname,
@@ -55,6 +55,12 @@ const RegistrationForm = () => {
 
       console.log("Signed up:", res.data);
       window.alert("Success! Account created.");
+
+
+
+
+
+
     } catch (err) {
       console.error("Sign-up error:", err);
       const data = err.response?.data;
@@ -82,7 +88,7 @@ const RegistrationForm = () => {
       }}
     >
       <Typography variant="h4" fontWeight={700} textAlign="center" mb={3}>
-        Student Sign-up
+         Sign-up
       </Typography>
 
       <Stack component="form" onSubmit={handleSubmit} spacing={3}>

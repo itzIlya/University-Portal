@@ -44,7 +44,6 @@ export default function LowEnrollmentCoursesView({ threshold = 10 }) {
         <Table>
           <TableHead>
             <TableRow>
-              {/* <TableCell>Section ID</TableCell> */}
               <TableCell>Course Code</TableCell>
               <TableCell>Course Name</TableCell>
               <TableCell>Semester</TableCell>
@@ -55,7 +54,6 @@ export default function LowEnrollmentCoursesView({ threshold = 10 }) {
           <TableBody>
             {data.map((row) => (
               <TableRow key={row.pcid}>
-                {/* <TableCell>{row.pcid}</TableCell> */}
                 <TableCell>{row.course_code}</TableCell>
                 <TableCell>{row.course_name}</TableCell>
                 <TableCell>{row.semester}</TableCell>

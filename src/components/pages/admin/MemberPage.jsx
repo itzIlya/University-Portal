@@ -1,4 +1,4 @@
-/* -------------------------------- MemberPage.jsx -------------------------- */
+
 import React, { useState, useEffect } from "react";
 import {
   Box, Stack, Typography, Table, TableBody, TableCell, TableContainer,
@@ -13,11 +13,9 @@ import api          from "../../../api/axios";
 import useCrudList  from "../../../hooks/useCrudList";
 import AdminCard    from "../../molecules/AdminCard";
 
-/* ───────────────────────── constants ───────────────────────── */
 const STAFF_ROLES   = ["INSTRUCTOR", "CLERK", "CHAIR", "ADMIN", "PROF"];
 const ALL_ROLES     = ["STUDENT", ...STAFF_ROLES];
 
-/* localStorage helpers → survive page reloads while testing */
 const LS_KEY = "member_roles_cache";
 const loadRoles = () => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || "{}"); }
@@ -25,31 +23,24 @@ const loadRoles = () => {
 };
 const saveRoles = (map) => localStorage.setItem(LS_KEY, JSON.stringify(map));
 
-/* ───────────────────────── component ───────────────────────── */
 export default function MemberPage() {
-  /* ---- master lists ---- */
   const { items: members,     loading, error, setError } = useCrudList("members", {});
   const { items: majors   } = useCrudList("majors",      {});
   const { items: depts    } = useCrudList("departments", {});
-  /* roles already stored in DB are **not** returned by /members.
-     We’ll cache the ones we add so the UI can show them instantly. */
+
   const [roleMap, setRoleMap] = useState(loadRoles);
   useEffect(() => saveRoles(roleMap), [roleMap]);
 
-  /* ---- dialog state ---- */
   const [open, setOpen]       = useState(false);
-  const [stage, setStage]     = useState("pick");  // "pick" ─or─ "form"
+  const [stage, setStage]     = useState("pick"); 
   const [member, setMember]   = useState(null);
   const [role, setRole]       = useState("");
 
-  /* dynamic form fields */
   const [major,      setMajor]      = useState("");
   const [department, setDepartment] = useState("");
   const [startDate,  setStartDate]  = useState(dayjs().format("YYYY-MM-DD"));
   const [endDate,    setEndDate]    = useState("");
 
-  /* ─── helpers ─────────────────────────────────────────────── */
-  /** push *new* role to cache (multiple per user allowed) */
   const cacheAdd = (mid, payload) =>
     setRoleMap((prev) => ({
       ...prev,
@@ -71,16 +62,16 @@ export default function MemberPage() {
   const handleSubmit = async () => {
     try {
       if (role === "STUDENT") {
-        /* ---- student record ---- */
+        /*  student record  */
         await api.post("student-records", {
           national_id: member.national_id,
           major_name : major,
         });
         cacheAdd(member.mid, { role: "STUDENT", major });
       } else {
-        /* ---- make sure person is staff first (promote is idempotent) ---- */
+        /*  make sure person is staff first (promote is idempotent) */
         await api.post("staff", { national_id: member.national_id });
-        /* ---- then assign staff role ---- */
+        /*  then assign staff role  */
         await api.post("staff-roles", {
           national_id    : member.national_id,
           department_name: department,
@@ -97,7 +88,6 @@ export default function MemberPage() {
     }
   };
 
-  /* ─── UI ───────────────────────────────────────────────────── */
   return (
     <AdminCard sx={{ maxWidth: 1280 }}>
       {/* header */}
@@ -125,7 +115,6 @@ export default function MemberPage() {
                 <TableCell>Name</TableCell>
                 <TableCell>National&nbsp;ID</TableCell>
                 <TableCell>Username</TableCell>
-                {/* <TableCell>Last&nbsp;Login</TableCell> */}
                 <TableCell>Roles</TableCell>
                 <TableCell width={80}></TableCell>
               </TableRow>
@@ -136,7 +125,6 @@ export default function MemberPage() {
                   <TableCell>{m.fname} {m.lname}</TableCell>
                   <TableCell>{m.national_id}</TableCell>
                   <TableCell>{m.username ?? "—"}</TableCell>
-                  {/* <TableCell>{m.last_login ?? "—"}</TableCell> */}
                   <TableCell>
                     {(roleMap[m.mid] || []).map((r, i) => (
                       <Chip
@@ -165,9 +153,7 @@ export default function MemberPage() {
         </TableContainer>
       )}
 
-      {/* ───────── dialog (pick → form) ───────── */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        {/* step A – choose which role */}
         {stage === "pick" && (
           <>
             <DialogTitle>Add new role for {member?.fname}</DialogTitle>
@@ -188,7 +174,6 @@ export default function MemberPage() {
           </>
         )}
 
-        {/* step B – gather extra info */}
         {stage === "form" && (
           <>
             <DialogTitle>

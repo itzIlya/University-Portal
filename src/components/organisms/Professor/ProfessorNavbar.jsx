@@ -7,7 +7,6 @@ import { useAuth } from "../../../context/AuthContext";
 
 const navLinks = [
   { label: "Dashboard", to: "/professor" },
-  // { label: "Sections",  to: "/professor/sections" },
 ];
 
 export default function ProfessorNavbar() {

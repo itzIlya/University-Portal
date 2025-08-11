@@ -290,6 +290,15 @@ export default function AdminDashboard() {
                 </motion.div>
                 <Divider />
 
+                <motion.div variants={fadeIn}>
+                  <QuickLink
+                    icon={<MeetingRoomIcon />}
+                    label="Add Room"
+                    onClick={() => navigate("/admin/rooms")}
+                  />
+                </motion.div>
+                <Divider />
+
                 {/* — new report links — */}
                 <motion.div variants={fadeIn}>
                   <QuickLink

@@ -1,4 +1,4 @@
-// src/components/pages/student/StudentCoursesPage.jsx
+
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -262,7 +262,6 @@ export default function StudentCoursesPage() {
         </Alert>
       </Snackbar>
 
-      {/* Remove error Snackbar */}
       <Snackbar
         open={deleteErrorOpen}
         autoHideDuration={5000}

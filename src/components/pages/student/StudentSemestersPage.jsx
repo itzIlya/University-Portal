@@ -1,4 +1,3 @@
-// src/components/pages/student/StudentSemestersPage.jsx
 import React, { useEffect, useState } from "react";
 import {
   Box,

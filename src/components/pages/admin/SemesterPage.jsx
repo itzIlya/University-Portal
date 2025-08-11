@@ -1,6 +1,4 @@
-// src/components/pages/admin/SemesterPage.jsx
-
-import React, { useEffect } from "react";
+import React from "react";
 import {
   Typography,
   Table,
@@ -16,17 +14,19 @@ import {
   Paper,
   TextField,
   Button,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import dayjs from "dayjs";
 import useCrudList from "../../../hooks/useCrudList";
 import AdminCard from "../../molecules/AdminCard";
 
-/* we no longer include is_active here; backend dictates which semester is active */
 const emptySemester = {
+  sem_title: "",
   start_date: dayjs().format("YYYY-MM-DD"),
   end_date: dayjs().add(4, "month").format("YYYY-MM-DD"),
-  sem_title: "",
+  is_active: true,
 };
 
 export default function SemesterPage() {
@@ -39,7 +39,12 @@ export default function SemesterPage() {
       setError("All fields are required");
       return;
     }
-    create();
+    if (dayjs(newItem.start_date) >= dayjs(newItem.end_date)) {
+      setError("Start date must be before end date");
+      return;
+    }
+    console.log("Submitting semester:", newItem); // Debug payload
+    create(newItem);
   };
 
   return (
@@ -69,6 +74,8 @@ export default function SemesterPage() {
           onChange={(e) =>
             setNewItem({ ...newItem, sem_title: e.target.value })
           }
+          helperText="Unique, max 30 chars (e.g., Summer-2026)"
+          inputProps={{ maxLength: 30 }}
         />
         <TextField
           label="Start"
@@ -87,6 +94,17 @@ export default function SemesterPage() {
           InputLabelProps={{ shrink: true }}
           value={newItem.end_date}
           onChange={(e) => setNewItem({ ...newItem, end_date: e.target.value })}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={newItem.is_active}
+              onChange={(e) =>
+                setNewItem({ ...newItem, is_active: e.target.checked })
+              }
+            />
+          }
+          label="Active"
         />
         <Button variant="contained" type="submit">
           Add

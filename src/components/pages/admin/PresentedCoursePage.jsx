@@ -24,7 +24,6 @@ import api from "../../../api/axios";
 import useCrudList from "../../../hooks/useCrudList";
 import AdminCard from "../../molecules/AdminCard";
 
-/* blank template for the create-form */
 const emptyForm = {
   prof_national_id: "",
   course_name: "",
@@ -37,7 +36,7 @@ const emptyForm = {
 };
 
 export default function PresentedCoursePage() {
-  /* ───── reference data ─────────────────────────────────────────── */
+
   const { items: courses } = useCrudList("courses", {});
   const { items: semesters } = useCrudList("semesters", {});
   const { items: majors } = useCrudList("majors", {});
@@ -45,7 +44,6 @@ export default function PresentedCoursePage() {
   const { items: profRows } = useCrudList("staff?role=PROF", {});
   const { items: members } = useCrudList("members", {});
 
-  /* map professors → {id:national_id,label:"…"} */
   const profOptions = useMemo(() => {
     if (!profRows.length || !members.length) return [];
     return profRows.flatMap(p => {
@@ -63,7 +61,6 @@ export default function PresentedCoursePage() {
     });
   }, [profRows, members]);
 
-  /* ───── form + snackbar state ──────────────────────────────────── */
   const [form, setForm] = useState(emptyForm);
   const [snack, setSnack] = useState({
     open: false,
@@ -77,14 +74,11 @@ export default function PresentedCoursePage() {
       [key]: e.target.value
     });
 
-  /* ───── refresh key for the table ──────────────────────────────── */
   const [refreshKey, setRefreshKey] = useState(0);
 
-  /* ───── table filter selections (semester + major) ─────────────── */
   const [filterSem, setFilterSem] = useState("");
   const [filterMajor, setFilterMajor] = useState("");
 
-  /* when lists load, pre-select the first item (for convenience) */
   useEffect(() => {
     if (!filterSem && semesters.length) {
       setFilterSem(semesters[0].sid);
@@ -97,7 +91,7 @@ export default function PresentedCoursePage() {
     }
   }, [majors, filterMajor]);
 
-  /* ───── presented-courses list state ───────────────────────────── */
+  /* presented-courses list state */
   const [pcRows, setPcRows] = useState([]);
   const [pcLoad, setPcLoad] = useState(false);
   const [pcError, setPcError] = useState(null);
@@ -127,7 +121,7 @@ export default function PresentedCoursePage() {
     })();
   }, [filterSem, filterMajor, refreshKey]);
 
-  /* ───── create presented course ───────────────────────────────── */
+  /* create presented course  */
   const submit = async e => {
     e.preventDefault();
     if (!form.course_name || !form.prof_national_id || !form.sem_title) {
@@ -177,7 +171,6 @@ export default function PresentedCoursePage() {
     !rooms.length ||
     !profOptions.length;
 
-  /* ───── UI ─────────────────────────────────────────────────────── */
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       <AdminCard>
@@ -248,7 +241,6 @@ export default function PresentedCoursePage() {
                 </TextField>
               </Grid>
 
-              {/* right */}
               <Grid item xs={12} md={6}>
                 <TextField
                   label="Capacity"

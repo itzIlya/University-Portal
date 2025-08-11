@@ -1,4 +1,4 @@
-// src/components/pages/student/StudentDashboard.jsx
+
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -148,7 +148,7 @@ export default function StudentDashboard() {
                 <Divider sx={{ bgcolor: "grey.300", my: 2 }} />
               </Grid>
 
-              {/* Body: either the edit form or static info */}
+              {/* Body */}
               {editing ? (
                 <>
                   {error && (
@@ -240,7 +240,7 @@ export default function StudentDashboard() {
 
         <Divider sx={{ my: 3, bgcolor: "grey.300" }} />
 
-        {/* Quick Links */}
+        {/* Links */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{

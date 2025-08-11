@@ -1,4 +1,4 @@
-/* --------------------------- CourseCreatePage.jsx ------------------------ */
+
 import {
     Box, TextField, Button, Stack, Snackbar, Alert,
     Typography, Paper, Table, TableHead, TableRow,
@@ -11,11 +11,9 @@ import {
   import useCrudList  from "../../../hooks/useCrudList";
   import AdminCard    from "../../molecules/AdminCard";
   
-  /* blank form template */
   const empty = { course_code: "", course_name: "" };
   
   export default function CourseCreatePage() {
-    /* ---------- keep a refreshKey instead of refetch() ---------- */
     const [refreshKey, setRefreshKey] = useState(0);
   
     /* list of existing courses */
@@ -30,7 +28,6 @@ import {
   
     const handle = field => e => setForm({ ...form, [field]: e.target.value });
   
-    /* ---------- POST /api/courses ---------- */
     const submit = async (e) => {
       e.preventDefault();
   
@@ -43,7 +40,7 @@ import {
         await api.post("courses", form);
         setSnack({ open:true, msg:"Course created ✔︎", sev:"success" });
         setForm(empty);
-        setRefreshKey(k => k + 1);        // fetch fresh list
+        setRefreshKey(k => k + 1);    
       } catch (err) {
         console.error(err);
         setSnack({
@@ -54,7 +51,7 @@ import {
       }
     };
   
-    /* ---------- UI ---------- */
+
     return (
       <Box sx={{ p:{ xs:2, md:4 } }}>
         <AdminCard>
