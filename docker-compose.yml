@@ -21,5 +21,25 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    image: uniback
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET: ${DJANGO_SECRET}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      # Django 4+ needs this for CSRF behind Docker
+      CSRF_TRUSTED_ORIGINS: http://localhost:8080
+    ports:
+      - "8071:8071"
+    volumes:
+      - .:/app        # hot-reload during dev
+
 volumes:
   db-data:

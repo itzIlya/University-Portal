@@ -47,3 +47,9 @@ AUTHENTICATION_BACKENDS = ["api.auth.MemberBackend"]
 
 REST_FRAMEWORK = { "UNAUTHENTICATED_USER": None }  # keep auth simple for now
 STATIC_URL = "/static/"
+
+
+CSRF_TRUSTED_ORIGINS = [
+	"http://localhost:5173",
+	
+]
