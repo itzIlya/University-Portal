@@ -1,7 +1,5 @@
 
-# SETUP
-
-# **Setup Guide**
+# Setup Guide
 
 ## Run the Backend and Database
 
