@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mysql:8.3                          # official image
+    container_name: university-db
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Europe/Berlin
+    ports:
+      - "3306:3306"                           # host → container
+    volumes:
+      - db-data:/var/lib/mysql               # persistent storage
+      - ./db:/docker-entrypoint-initdb.d:ro  # bootstrap scripts
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: uniback
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SECRET: ${DJANGO_SECRET}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT}
+      # Django 4+ needs this for CSRF behind Docker
+      CSRF_TRUSTED_ORIGINS: http://localhost:8080
+    ports:
+      - "8071:8071"
+    volumes:
+      - .:/app        # hot-reload during dev
+
+volumes:
+  db-data:
