@@ -1,0 +1,76 @@
+
+import { Routes, Route, Navigate } from "react-router-dom";
+import RegistrationPage from "./components/pages/RegistrationPage";
+import SignInPage from "./components/pages/SignInPage";
+import RequireAdmin from "./components/routes/RequireAdmin";
+import AdminDashboard from "./components/pages/AdminDashboard";
+import SemesterPage from "./components/pages/admin/SemesterPage";
+import DepartmentPage from "./components/pages/admin/DepartmentPage";
+import MajorPage from "./components/pages/admin/MajorPage";
+import MemberPage from "./components/pages/admin/MemberPage";
+import CourseCreatePage from "./components/pages/admin/CourseCreatePage";
+import PresentedCoursePage from "./components/pages/admin/PresentedCoursePage";
+import RoomPage from "./components/pages/admin/RoomPage";
+import StudentDashboard from "./components/pages/student/StudentDashboard";
+import StudentSemestersPage from "./components/pages/student/StudentSemestersPage";
+import StudentCoursesPage from "./components/pages/student/StudentCoursesPage";
+import StudentTranscriptsPage from "./components/pages/student/StudentTranscriptsPage";
+import ProfessorDashboard from "./components/pages/Professor/ProfessorDashoard";
+import ProfessorSectionsPage from "./components/pages/Professor/ProfessorSectionsPage";
+import SectionStudentsPage from "./components/pages/Professor/SectionStudentsPage";
+import LandingPage from "./components/pages/LandingPage";
+import ProfessorLoadView from "./components/pages/admin/ProfessorLoadView";
+import MajorGPAView from "./components/pages/admin/MajorGPAView";
+import LowEnrollmentView from "./components/pages/admin/LowEnrollmentView";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/register" element={<RegistrationPage />} />
+      <Route path="/signin" element={<SignInPage />} />
+
+      {/* admin pages */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAdmin>
+            <AdminDashboard />
+          </RequireAdmin>
+        }
+      >
+        <Route index element={<Navigate to="semesters" replace />} />
+        <Route path="semesters" element={<SemesterPage />} />
+        <Route path="departments" element={<DepartmentPage />} />
+        <Route path="majors" element={<MajorPage />} />
+        <Route path="members" element={<MemberPage />} />
+        <Route path="courses" element={<CourseCreatePage />} />
+        <Route path="rooms" element={<RoomPage />} />
+        <Route path="presented" element={<PresentedCoursePage />} />
+        <Route path="major-gpa" element={<MajorGPAView />} />
+        <Route path="low-enrollment" element={<LowEnrollmentView />} />
+        <Route path="professor-load" element={<ProfessorLoadView />} />
+      </Route>
+
+      {/* student pages */}
+      <Route path="/student" element={<StudentDashboard />} />
+      <Route path="/student/semesters" element={<StudentSemestersPage />} />
+      <Route path="/student/semesters/:sid" element={<StudentCoursesPage />} />
+      <Route path="/student/transcripts" element={<StudentTranscriptsPage />} />
+      <Route
+        path="/student/semesters/:sid/transcript"
+        element={<StudentTranscriptsPage />}
+      />
+
+      {/* Professor pages */}
+      <Route path="/professor" element={<ProfessorDashboard />} />
+      <Route path="/professor/sections" element={<ProfessorSectionsPage />} />
+      <Route
+        path="/professor/sections/:pcid/students"
+        element={<SectionStudentsPage />}
+      />
+    </Routes>
+  );
+}
+
+export default App;
