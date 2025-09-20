@@ -48,7 +48,7 @@ export default function StudentDashboard() {
         national_id: data.national_id || "",
         birthday: data.birthday?.split("T")[0] || "",
         username: data.username || "",
-      });
+      }); 
     });
     api
       .get("/my-student-records")
