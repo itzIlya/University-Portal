@@ -1,5 +1,0 @@
-# requirements.txt  (MySQL edition)
-Django==4.2.*
-djangorestframework
-PyMySQL>=1.1
-python-dotenv       # for .env parsing
